@@ -38,8 +38,8 @@ TEST_F(SNLPrimitivesTest0, test) {
   SNLPyLoader::loadPrimitives(library, primitives0Path);
   ASSERT_EQ(1, library->getDesigns().size());
   auto lut4 = library->getDesign(SNLName("LUT4")); 
-  EXPECT_TRUE(lut4->isPrimitive());
   ASSERT_NE(nullptr, lut4);
+  EXPECT_TRUE(lut4->isPrimitive());
   ASSERT_EQ(5, lut4->getScalarTerms().size());
   using Terms = std::vector<SNLScalarTerm*>;
   Terms terms(lut4->getScalarTerms().begin(), lut4->getScalarTerms().end()); 
