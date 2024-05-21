@@ -15,9 +15,11 @@ class SNLDesign;
 
 class SNLLibraryTruthTables {
     public:
-      using TruthTables = std::map<SNLTruthTable, SNLDesign*>;
-      static TruthTables construct(SNLLibrary* library);
-      static SNLDesign* getDesignForTruthTable(const TruthTables& truthTables, const SNLTruthTable& tt);
+      using Primitives = std::vector<SNLDesign*>;
+      using LibraryTruthTables = std::map<SNLTruthTable, Primitives>;
+      static LibraryTruthTables construct(SNLLibrary* library);
+      static LibraryTruthTables getTruthTables(const SNLLibrary* library);
+      static SNLDesign* getDesignForTruthTable(const SNLLibrary* library, const SNLTruthTable& tt);
 };
 
 }} // namespace SNL // namespace naja
