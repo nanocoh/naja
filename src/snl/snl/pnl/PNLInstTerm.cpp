@@ -61,6 +61,10 @@ void PNLInstTerm::destroyFromInstance() {
   delete this;
 }
 
+naja::SNL::SNLID PNLInstTerm::getSNLID() const {
+  return PNLDesignObject::getSNLID(naja::SNL::SNLID::Type::Instance, 0, id_, 0);
+}
+
 }} // namespace PNL // namespace naja
 
 

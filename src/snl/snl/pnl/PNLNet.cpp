@@ -14,9 +14,9 @@ PNLNet* PNLNet::create(PNLDesign* design, const naja::SNL::SNLName& name, naja::
   auto net = new PNLNet();
   net->design_ = design;
   net->name_ = name;
-  net->id_ = id;
   net->preCreate();
   net->postCreate();
+  design->addNet(net);
   return net;
 }
 
@@ -76,6 +76,10 @@ void PNLNet::preDestroy() {
 void PNLNet::destroyFromDesign() {
   preDestroy();
   delete this;
+}
+
+naja::SNL::SNLID PNLNet::getSNLID() const {
+  return PNLDesignObject::getSNLID(naja::SNL::SNLID::Type::Instance, 0, id_, 0);
 }
 
 }} // namespace PNL // namespace naja

@@ -11,13 +11,13 @@ using namespace naja::SNL;
 
 namespace naja { namespace PNL {
 
-PNLDesign::PNLDesign(SNLLibrary* library):
-  super(), library_(library), origin_(0, 0)
+PNLDesign::PNLDesign(SNLLibrary* library, const naja::SNL::SNLName& name):
+  super(), library_(library), origin_(0, 0), name_(name)
 {}
 
-PNLDesign* PNLDesign::create(SNLLibrary* library) {
+PNLDesign* PNLDesign::create(SNLLibrary* library, const naja::SNL::SNLName& name) {
   preCreate(library);
-  auto design = new PNLDesign(library);
+  auto design = new PNLDesign(library, name);
   design->postCreateAndSetID();
   return design;
 }
@@ -106,7 +106,7 @@ void PNLDesign::addNet(PNLNet* net) {
   nets_.push_back(net);
 }
 
-PNLNet* PNLDesign::getNet(SNLID::DesignObjectID id) const {
+naja::PNL::PNLNet* PNLDesign::getNet(naja::SNL::SNLID::DesignObjectID id) const {
   if (id >= nets_.size()) {
     // TODO: throw exception
     return nullptr;
@@ -121,15 +121,96 @@ void PNLDesign::detachInstance(SNLID::DesignObjectID id) {
   instances_[id] = nullptr;
 }
 
-void PNLDesign::addInstance(PNLInstance* instance) {
-  instances_.push_back(instance);
-}
-
 PNLInstance* PNLDesign::getInstance(SNLID::DesignObjectID id) const {
   if (id >= instances_.size()) {
     // TODO: throw exception
   }
   return instances_[id];
+}
+
+naja::PNL::PNLNet* PNLDesign::getNet(const naja::SNL::SNLName& name) const {
+  for (auto net : nets_) {
+    if (net->getName() == name) {
+      return net;
+    }
+  }
+  return nullptr;
+}
+
+PNLNet* PNLDesign::addNet(const naja::SNL::SNLName& name) {
+  PNLNet* net = PNLNet::create(this, name, ( unsigned int ) nets_.size());
+  return net;
+}
+
+void PNLDesign::setAbutmentBox(const PNLBox& abutmentBox)
+// ***********************************************
+{
+  // SlavedsRelation* slaveds = SlavedsRelation::get( this );
+  // if (not slaveds or (this == slaveds->getMasterOwner())) {
+  //   _setAbutmentBox( abutmentBox ); 
+
+  //   if (getFlags().isset(Flags::SlavedAb)) return;
+
+  //   for ( Cell* slavedCell : SlavedsSet(this) )
+  //     slavedCell->_setAbutmentBox( abutmentBox );
+  // } else {
+  //   // cerr << Error( "Cell::setAbutmentBox(): Abutment box of \"%s\" is slaved to \"%s\"."
+  //   //              , getString(getName()).c_str()
+  //   //              , getString(static_cast<Cell*>(slaveds->getMasterOwner())->getName()).c_str()
+  //   //              ) << endl;
+  //   assert(false);
+  // }
+  _setAbutmentBox( abutmentBox ); 
+}
+
+void PNLDesign::_setAbutmentBox(const PNLBox& abutmentBox)
+// ***********************************************
+{
+  if (abutmentBox != abutmentBox_) {
+    if (not abutmentBox_.isEmpty() and
+       (abutmentBox.isEmpty() or not abutmentBox.contains(abutmentBox_)))
+      _unfit( abutmentBox_ );
+    abutmentBox_ = abutmentBox;
+    _fit( abutmentBox_ );
+  }
+}
+
+void PNLDesign::_fit(const PNLBox& box)
+// ****************************
+{
+    if (box.isEmpty()) return;
+    if (boundingBox_.isEmpty()) return;
+    if (boundingBox_.contains(box)) return;
+    boundingBox_.merge(box);
+    for ( PNLInstance* iinstance : getSlaveInstances() ) {
+      iinstance->getDesign()->_fit(iinstance->getTransform().getBox(box));
+    }
+}
+
+void PNLDesign::_unfit(const PNLBox& box)
+// ******************************
+{
+    if (box.isEmpty()) return;
+    if (boundingBox_.isEmpty()) return;
+    if (!boundingBox_.isConstrainedBy(box)) return;
+    boundingBox_.makeEmpty();
+    for ( PNLInstance* iinstance : getSlaveInstances() ) {
+        iinstance->getDesign()->_unfit(iinstance->getTransform().getBox(box));
+    }
+}
+
+naja::PNL::PNLTerm* PNLDesign::addTerm(const naja::SNL::SNLName& name) {
+  PNLTerm* term = PNLTerm::create(this, ( unsigned int ) terms_.size(), name);
+  return term;
+}
+
+PNLTerm* PNLDesign::getTerm(naja::SNL::SNLName name) const {
+  for (auto term : terms_) {
+    if (term->getName() == name) {
+      return term;
+    }
+  }
+  return nullptr;
 }
 
 }} // namespace PNL // namespace naja

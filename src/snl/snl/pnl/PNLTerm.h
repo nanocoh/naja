@@ -8,6 +8,7 @@
 #include "PNLDesignObject.h"
 #include "SNLID.h"
 #include "SNLName.h"
+#include "PNLUnit.h"
 
 namespace naja {
 namespace PNL {
@@ -27,7 +28,8 @@ class PNLTerm : public PNLDesignObject {
     enum DirectionEnum {
       Input,   ///< Input direction.
       Output,  ///< Output direction.
-      InOut    ///< InOut direction.
+      InOut,   ///< InOut direction.
+      None,    ///< None direction.
     };
     Direction(const DirectionEnum& dirEnum);
     Direction(const Direction& direction) = default;
@@ -40,9 +42,9 @@ class PNLTerm : public PNLDesignObject {
   };
 
   static PNLTerm* create(PNLDesign* design,
-                         Direction direction,
                          naja::SNL::SNLID::DesignObjectID id,
-                         const naja::SNL::SNLName& name);
+                         const naja::SNL::SNLName& name,
+                         Direction direction = Direction::Input);
 
   /// \return this PNLTerm Direction.
   Direction getDirection();
@@ -72,6 +74,12 @@ class PNLTerm : public PNLDesignObject {
                  bool recursive = true,
                  std::ostream& stream = std::cerr) const override {}
 
+  void         translate      ( const PNLUnit::Unit& dx, const PNLUnit::Unit& dy );
+
+  naja::SNL::SNLID getSNLID() const override;
+
+  const naja::SNL::SNLName& getName() const { return name_; }
+
  protected:
   PNLTerm() = default;
 
@@ -86,6 +94,8 @@ class PNLTerm : public PNLDesignObject {
   PNLNet* net_;
   PNLDesign* design_;
   boost::intrusive::set_member_hook<> netComponentsHook_{};
+  PNLUnit::Unit _dx;
+  PNLUnit::Unit _dy;
 };
 }  // namespace PNL
 }  // namespace naja

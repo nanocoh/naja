@@ -7,8 +7,8 @@ namespace naja { namespace PNL {
 
 class PNLOrientation {
   public:
-    class Type {
-      public:
+    // class Type {
+    //   public:
         enum TypeEnum {
           R0,     // Represents no change in orientation
           R90,    // Represents a 90 degree rotation
@@ -19,13 +19,27 @@ class PNLOrientation {
           MX,     // Represents mirroring about the X axis
           MXR90   // Represents mirroring about the X axis then a 90 degree rotation
         };
-        Type(const TypeEnum& typeEnum);
-        Type(const Type&) = default;
-        Type& operator=(const Type&) = default;
-        std::string getString() const;
-      private:
-        TypeEnum typeEnum_;
-    };
+    //     Type(const TypeEnum& typeEnum);
+    //     Type(const Type&) = default;
+    //     Type& operator=(const Type&) = default;
+    //     //std::std::string getstd::string() const;
+
+    //   private:
+    //     TypeEnum typeEnum_;
+    // };
+
+     TypeEnum _type;
+
+        public: PNLOrientation(const TypeEnum& type = R0) : _type(type) {};
+        public: PNLOrientation(const PNLOrientation& orientation) : _type(orientation._type) {};
+        public: PNLOrientation(const std::string& ) = delete;
+
+        public: PNLOrientation& operator=(const PNLOrientation& orientation);
+
+        public: operator const TypeEnum&() const {return _type;};
+
+        public: const TypeEnum& getType() const {return _type;};
+
 };
 
 }} // namespace PNL // namespace naja

@@ -3,13 +3,14 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "PNLDesign.h"
 #include "PNLDesignObject.h"
+#include "PNLInstance.h"
+#include "PNLNet.h"
 #include "PNLTerm.h"
 #include "SNLID.h"
 #include "SNLName.h"
-#include "PNLNet.h"
-#include "PNLInstance.h"
-#include "PNLDesign.h"
+#include "PNLUnit.h"
 
 #pragma once
 
@@ -25,10 +26,10 @@ class PNLInstTerm : public PNLDesignObject {
   using super = PNLDesignObject;
 
   static PNLInstTerm* create(PNLInstance* instance,
-                              PNLTerm* term,
-                              PNLNet* net,
-                              PNLTerm::Direction direction,
-                              naja::SNL::SNLID::DesignObjectID id);
+                             PNLTerm* term,
+                             PNLNet* net,
+                             PNLTerm::Direction direction,
+                             naja::SNL::SNLID::DesignObjectID id);
 
   /// \return this PNLInstTerm Direction.
   PNLTerm::Direction getDirection();
@@ -44,7 +45,7 @@ class PNLInstTerm : public PNLDesignObject {
   void setNet(PNLNet* net);
 
   PNLInstance* getInstance() const;
-  
+
   naja::SNL::SNLID::DesignObjectID getID() const;
 
   void destroyFromInstance();
@@ -55,7 +56,7 @@ class PNLInstTerm : public PNLDesignObject {
   void debugDump(size_t indent,
                  bool recursive = true,
                  std::ostream& stream = std::cerr) const override {}
-  
+
   PNLDesign* getDesign() const override { return instance_->getDesign(); }
 
  protected:
@@ -65,12 +66,15 @@ class PNLInstTerm : public PNLDesignObject {
   void postCreate();
   void preDestroy() override;
 
+  naja::SNL::SNLID getSNLID() const override;
+
  private:
   naja::SNL::SNLID::DesignObjectID id_;
   PNLTerm::Direction direction_ = PNLTerm::Direction::Input;
   PNLNet* net_ = nullptr;
   PNLInstance* instance_ = nullptr;
   PNLTerm* term_ = nullptr;
+  naja::SNL::SNLName name_;
 };
 
 }  // namespace PNL

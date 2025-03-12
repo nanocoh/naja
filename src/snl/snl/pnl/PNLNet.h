@@ -18,7 +18,28 @@ class PNLInstTerm;
 
 class PNLNet : public PNLDesignObject {
  public:
+
+  class Direction {
+   public:
+    enum DirectionEnum {
+      Input,   ///< Input direction.
+      Output,  ///< Output direction.
+      InOut,    ///< InOut direction.
+      Tristate, ///< Tristate direction.
+    };
+    Direction(const DirectionEnum& dirEnum) : dirEnum_(dirEnum) {}
+    Direction(const Direction& direction) = default;
+    Direction& operator=(const Direction& direction) = default;
+    operator const DirectionEnum&() const { return dirEnum_; }
+    std::string getString() const;
+
+   private:
+    DirectionEnum dirEnum_;
+  };
+
   using super = PNLDesignObject;
+
+  public: enum Type {UNDEFINED=0, LOGICAL=1, CLOCK=2, POWER=3, GROUND=4, BLOCKAGE=5, FUSED=6};
 
   static PNLNet* create(PNLDesign* design,
                         const naja::SNL::SNLName& name,
@@ -44,8 +65,29 @@ class PNLNet : public PNLDesignObject {
   void debugDump(size_t indent,
                  bool recursive = true,
                  std::ostream& stream = std::cerr) const override {}
+  naja::SNL::SNLName getName() const { return name_; }
+  bool isVCC() const { return isVCC_; }
+  bool isGND() const { return !isVCC_; }
+  void seeIsVCC(bool vcc) { isVCC_ = vcc; }
+  bool isSupply   () const {return (isVCC() || isGND());};
 
+  const std::vector<PNLTerm*>& getTerms() const { return terms_; }
+
+  public: const Type& getType() const {return type_;};
+  void setName(const naja::SNL::SNLName& name) { name_ = name; }
+  void setType(Type type) { type_ = type; }
+  void setExternal(bool external) { external_ = external; }
+
+  void setDirection(const Direction& direction) { direction_ = direction; }
+  Direction getDirection() const { return direction_; }
+
+  void setGlobal(bool global) { isGlobal_ = global; }
+  bool isGlobal() const { return isGlobal_; }
+  
+  naja::SNL::SNLID getSNLID() const override;
+  
  protected:
+
   PNLNet() = default;
 
   static void preCreate();
@@ -58,6 +100,11 @@ class PNLNet : public PNLDesignObject {
   PNLDesign* design_;
   std::vector<PNLTerm*> terms_;
   std::vector<PNLInstTerm*> instTerms_;
+  bool isVCC_ = false;
+  Type type_ = Type::UNDEFINED;
+  bool external_ = false;
+  Direction direction_ = Direction::Input;
+  bool isGlobal_ = false;
 };
 
 }  // namespace PNL

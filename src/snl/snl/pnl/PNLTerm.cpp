@@ -12,9 +12,9 @@ PNLTerm::Direction::Direction(const DirectionEnum& dirEnum):
 {}
 
 PNLTerm* PNLTerm::create(PNLDesign* design,
-                         Direction direction,
                          naja::SNL::SNLID::DesignObjectID id,
-                         const naja::SNL::SNLName& name) {
+                         const naja::SNL::SNLName& name,
+                         Direction direction) {
   PNLTerm* term = new PNLTerm();
   term->design_ = design;
   term->name_ = name;
@@ -22,6 +22,8 @@ PNLTerm* PNLTerm::create(PNLDesign* design,
   term->id_ = id;
   term->preCreate();
   term->postCreate();
+  design->addTerm(term);
+  printf("add to design %s\n", design->getName().getString().c_str());
   return term;
 }
 
@@ -30,8 +32,9 @@ std::string PNLTerm::Direction::getString() const {
     case Direction::Input: return "Input";
     case Direction::Output: return "Output";
     case Direction::InOut: return "InOut";
+    case Direction::None: return "None";
   }
-  return "Unknown";
+  return "None";
 }
 
 PNLTerm::Direction PNLTerm::getDirection() {
@@ -68,6 +71,20 @@ void PNLTerm::preDestroy() {
 void PNLTerm::destroyFromDesign() {
   preDestroy();
   delete this;
+}
+
+void PNLTerm::translate(const PNLUnit::Unit& dx, const PNLUnit::Unit& dy)
+// **************************************************************
+{
+    if ((dx != 0) || (dy != 0)) {
+        //invalidate(true);
+        _dx += dx;
+        _dy += dy;
+    }
+}
+
+naja::SNL::SNLID PNLTerm::getSNLID() const {
+  return PNLDesignObject::getSNLID(naja::SNL::SNLID::Type::Instance, 0, id_, 0);
 }
 
 }} // namespace PNL // namespace naja

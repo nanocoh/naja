@@ -1,16 +1,37 @@
 #ifndef __PNL_POINT_H_
 #define __PNL_POINT_H_
 
+#include "PNLUnit.h"
+
 namespace naja { namespace PNL {
 
 class PNLPoint {
   public:
-    PNLPoint(int x, int y): x_(x), y_(y) {}
-    int getX() const { return x_; }
-    int getY() const { return y_; }
+    PNLPoint(PNLUnit::Unit x, PNLUnit::Unit y): x_(x), y_(y) {}
+    PNLUnit::Unit getX() const { return x_; }
+    PNLUnit::Unit getY() const { return y_; }
+    // comperators
+    bool operator==(const PNLPoint& other) const {
+      return x_ == other.x_ && y_ == other.y_;
+    }
+    bool operator!=(const PNLPoint& other) const {
+      return !(*this == other);
+    }
+    bool operator<(const PNLPoint& other) const {
+      return x_ < other.x_ || (x_ == other.x_ && y_ < other.y_);
+    }
+    bool operator>(const PNLPoint& other) const {
+      return other < *this;
+    }
+    bool operator<=(const PNLPoint& other) const {
+      return !(*this > other);
+    }
+    bool operator>=(const PNLPoint& other) const {
+      return !(*this < other);
+    }
   private:
-    int x_;
-    int y_;
+    PNLUnit::Unit x_;
+    PNLUnit::Unit y_;
 };
 
 
