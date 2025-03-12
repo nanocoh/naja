@@ -8,29 +8,12 @@
 #include <memory>
 #include <boost/algorithm/string.hpp>
 #include  "lefrReader.hpp"
-// #include "hurricane/configuration/Configuration.h"
-// #include "hurricane/Error.h"
-// #include "hurricane/Warning.h"
-// #include "hurricane/DataBase.h"
-// #include "hurricane/BasicLayer.h"
-// #include "hurricane/Technology.h"
 #include "PNLNet.h"
 #include "PNLTerm.h"
-// #include "hurricane/Contact.h"
-// #include "hurricane/Horizontal.h"
-// #include "hurricane/Vertical.h"
-// #include "hurricane/Rectilinear.h"
 #include "PNLDesign.h"
 #include "PNLPoint.h"
 #include "SNLLibrary.h"
-// #include "hurricane/UpdateSession.h"
-// #include "crlcore/Utilities.h"
-// #include "crlcore/ToolBox.h"
-// #include "crlcore/RoutingGauge.h"
-// #include "crlcore/PNLDesignGauge.h"
-// #include "crlcore/AllianceFramework.h"
 #include "LefImport.h"
-//#include "crlcore/Gds.h"
 #include "SNLDB.h"
 #include "SNLUniverse.h"
 #include "SNLName.h"
@@ -1283,8 +1266,6 @@ namespace {
   using std::cerr;
   using std::endl;
   using std::string;
-  //using Hurricane::UpdateSession;
-
 
   SNLLibrary* LefImport::load ( string fileName )
   {
