@@ -1,17 +1,6 @@
-// -*- C++ -*-
+// SPDX-FileCopyrightText: 2025 The Naja authors <https://github.com/najaeda/naja/blob/main/AUTHORS>
 //
-// This file is part of the Coriolis Software.
-// Copyright (c) UPMC 2017-2018, All Rights Reserved
-//
-// +-----------------------------------------------------------------+
-// |                   C O R I O L I S                               |
-// |        C a d e n c e   L E F   I m p o r t e r                  |
-// |                                                                 |
-// |  Author      :                    Jean-Paul CHAPUT              |
-// |  E-mail      :i           Jean-Paul.Chaput@lip6.fr              |
-// | =============================================================== |
-// |  C++ Header  :       "./crlcore/LefImport.h"                    |
-// +-----------------------------------------------------------------+
+// SPDX-License-Identifier: Apache-2.0
 
 #ifndef CRL_LEF_IMPORT_H
 #define CRL_LEF_IMPORT_H
