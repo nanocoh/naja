@@ -4,11 +4,13 @@
 
 set(SOURCES
   LefImport.cpp
+  LefExport.cpp
 )
 
 #In the future provide a header exposing only simple parsing interface
 SET(HEADERS
   LefImport.h
+  LefExport.h
 )
 
 add_library(naja_lefdef STATIC ${SOURCES})

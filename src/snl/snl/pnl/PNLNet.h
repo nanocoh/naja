@@ -77,6 +77,7 @@ class PNLNet : public PNLDesignObject {
   void setName(const naja::SNL::SNLName& name) { name_ = name; }
   void setType(Type type) { type_ = type; }
   void setExternal(bool external) { external_ = external; }
+  bool isExternal() const { return external_; }
 
   void setDirection(const Direction& direction) { direction_ = direction; }
   Direction getDirection() const { return direction_; }
@@ -85,6 +86,10 @@ class PNLNet : public PNLDesignObject {
   bool isGlobal() const { return isGlobal_; }
   
   naja::SNL::SNLID getSNLID() const override;
+
+  bool isPower() const { return type_ == Type::POWER; }
+  bool isGround() const { return type_ == Type::GROUND; }
+  bool isClock() const { return type_ == Type::CLOCK; }
   
  protected:
 

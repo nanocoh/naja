@@ -7,6 +7,10 @@
 #include "SNLDB.h"
 #include "SNLLibrary.h"
 
+// for ostringstream
+#include <sstream>
+#include "SNLException.h"
+
 using namespace naja::SNL; 
 
 namespace naja { namespace PNL {
@@ -211,6 +215,26 @@ PNLTerm* PNLDesign::getTerm(naja::SNL::SNLName name) const {
     }
   }
   return nullptr;
+}
+
+void PNLDesign::setName(const naja::SNL::SNLName& name) {
+  if (name_ == name) {
+    return;
+  }
+  if (not name.empty()) {
+    /* check collision */
+    if (auto collision = getLibrary()->getSNLDesign(name)) {
+      std::ostringstream reason;
+      reason << "In library " << getLibrary()->getString()
+        << ", cannot rename " << getString() << " to "
+        << name.getString() << ", another Design " << collision->getString()
+        << " has already this name.";
+      throw SNLException(reason.str());
+    }
+  }
+  auto previousName = getName();
+  name_ = name;
+  getLibrary()->rename(this, previousName);
 }
 
 }} // namespace PNL // namespace naja

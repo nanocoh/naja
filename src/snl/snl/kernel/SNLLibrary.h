@@ -116,6 +116,7 @@ class SNLLibrary final: public SNLObject {
     SNLDesign* getSNLDesign(SNLID::DesignID id) const;
     /// \return SNLDesign named name
     SNLDesign* getSNLDesign(const SNLName& name) const;
+    
     /// \return the collection of SNLDesign contained in this SNLLibrary
     NajaCollection<SNLDesign*> getSNLDesigns() const;
 
@@ -175,6 +176,7 @@ class SNLLibrary final: public SNLObject {
     void removeLibrary(SNLLibrary* library);
     void rename(SNLLibrary* library, const SNLName& name);
     void rename(SNLDesign* design, const SNLName& name);
+    void rename(PNLDesign* design, const SNLName& name);
 
     void addSNLDesignAndSetID(SNLDesign* design);
     void addSNLDesign(SNLDesign* design);
@@ -189,6 +191,8 @@ class SNLLibrary final: public SNLObject {
       boost::intrusive::member_hook<SNLDesign, boost::intrusive::set_member_hook<>, &SNLDesign::libraryDesignsHook_>;
     using SNLLibraryDesigns = boost::intrusive::set<SNLDesign, SNLLibraryDesignsHook>;
     using SNLDesignNameIDMap = std::map<SNLName, SNLID::DesignID>;
+    using PNLDesignNameIDMap = std::map<SNLName, SNLID::DesignID>;
+
 
     using SNLLibraryPNLDesignsHook =
       boost::intrusive::member_hook<PNLDesign, boost::intrusive::set_member_hook<>, &PNLDesign::libraryDesignsHook_>;
@@ -208,6 +212,7 @@ class SNLLibrary final: public SNLObject {
     SNLLibraryNameIDMap                 libraryNameIDMap_     {};
     SNLLibraryDesigns                   snlDesigns_           {};
     SNLDesignNameIDMap                  designNameIDMap_      {};
+    PNLDesignNameIDMap                  pnlDesignNameIDMap_      {};
     SNLLibraryPNLDesigns                pnlDesigns_           {};
 };
 

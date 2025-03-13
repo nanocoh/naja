@@ -8,12 +8,29 @@
 #include <memory>
 #include <boost/algorithm/string.hpp>
 #include  "lefrReader.hpp"
+// #include "hurricane/configuration/Configuration.h"
+// #include "hurricane/Error.h"
+// #include "hurricane/Warning.h"
+// #include "hurricane/DataBase.h"
+// #include "hurricane/BasicLayer.h"
+// #include "hurricane/Technology.h"
 #include "PNLNet.h"
 #include "PNLTerm.h"
+// #include "hurricane/Contact.h"
+// #include "hurricane/Horizontal.h"
+// #include "hurricane/Vertical.h"
+// #include "hurricane/Rectilinear.h"
 #include "PNLDesign.h"
 #include "PNLPoint.h"
 #include "SNLLibrary.h"
+// #include "hurricane/UpdateSession.h"
+// #include "crlcore/Utilities.h"
+// #include "crlcore/ToolBox.h"
+// #include "crlcore/RoutingGauge.h"
+// #include "crlcore/PNLDesignGauge.h"
+// #include "crlcore/AllianceFramework.h"
 #include "LefImport.h"
+//#include "crlcore/Gds.h"
 #include "SNLDB.h"
 #include "SNLUniverse.h"
 #include "SNLName.h"
@@ -237,7 +254,7 @@ namespace {
   inline       string            LefParser::getLibraryName           () const { return _libraryName; }
   inline       SNLLibrary*          LefParser::getLibrary               ( bool create ) { if (not _library and create) createSNLLibrary(); return _library; }
   inline       PNLDesign*             LefParser::getPNLDesign                  () const { return _cell; }
-  inline       void              LefParser::setPNLDesign                  ( PNLDesign* cell ) { _cell=cell; }
+  inline       void              LefParser::setPNLDesign                  ( PNLDesign* cell ) { printf("setPNLDesign %p\n", (void*) cell); _cell=cell; }
   inline       string            LefParser::getForeignPath           () const { return _foreignPath; }
   inline       void              LefParser::setForeignPath           ( string path ) { _foreignPath=path; }
   inline const PNLPoint&            LefParser::getForeignPosition       () const { return _foreignPosition; }
@@ -410,6 +427,7 @@ namespace {
 
     _library = lefRootSNLLibrary->getLibrary( SNLName(_libraryName) );
     if (_library) {
+      assert(false);
       // Error
     } else {
       _library = SNLLibrary::create( lefRootSNLLibrary, SNLName(_libraryName) );
@@ -742,9 +760,10 @@ namespace {
     string     cellName = macro->name();
     PNLUnit::Unit  width    = 0;
     PNLUnit::Unit  height   = 0;
-    PNLDesign*      cell     = parser->earlyGetPNLDesign( created );
+    PNLDesign*      cell     = parser->earlyGetPNLDesign( created, cellName );
 
     if (cell->getName() != SNLName(cellName)) {
+      printf("cell name %s\n", cellName.c_str());
       cell->setName( SNLName(cellName) );
     }
 
@@ -802,8 +821,23 @@ namespace {
   
   int  LefParser::_macroSiteCbk ( lefrCallbackType_e c, const lefiMacroSite* site, lefiUserData ud )
    {  
-    printf("LefParser::_macroSiteCbk\n"); 
-    return 0; }
+    printf("LefParser::_macroSiteCbk\n");
+    //AllianceFramework* af     = AllianceFramework::get();
+    // LefParser*         parser = (LefParser*)ud;
+
+    // //parser->setPNLDesignGauge( nullptr );
+
+    // bool       created  = false;
+    // string     cellName = site->siteName();
+    // PNLUnit::Unit  width    = 0;
+    // PNLUnit::Unit  height   = 0;
+    // PNLDesign*      cell     = parser->earlyGetPNLDesign( created , cellName);
+
+    // if (cell->getName() != SNLName(cellName)) {
+    //   cell->setName( SNLName(cellName) );
+    // } 
+    return 0; 
+  }
 
   
   int  LefParser::_pinCbk ( lefrCallbackType_e c, lefiPin* pin, lefiUserData ud )
@@ -1222,7 +1256,8 @@ namespace {
     size_t  islash = file.rfind( '/' );
     islash = (islash == string::npos) ? 0 : islash+1;
 
-    string                libraryName = file.substr( islash, file.size()-4-islash );
+    //string                libraryName = file.substr( islash, file.size()-4-islash );
+    string                libraryName = "LoadedLibrary";
     unique_ptr<LefParser> parser      ( new LefParser(file,libraryName) );
     // std::ifstream f("file.lef");
     // if (f.is_open())
@@ -1266,6 +1301,8 @@ namespace {
   using std::cerr;
   using std::endl;
   using std::string;
+  //using Hurricane::UpdateSession;
+
 
   SNLLibrary* LefImport::load ( string fileName )
   {
@@ -1289,25 +1326,25 @@ namespace {
 
   void  LefImport::reset ()
   {
-#if defined(HAVE_LEFDEF)
+//#if defined(HAVE_LEFDEF)
     LefParser::reset();
-#endif
+//#endif
   }
 
 
   void  LefImport::setMergeLibrary ( SNLLibrary* library )
   {
-#if defined(HAVE_LEFDEF)
+//#if defined(HAVE_LEFDEF)
     LefParser::setMergeLibrary( library );
-#endif
+//#endif
   }
 
 
   void  LefImport::setGdsForeignDirectory ( string path )
   {
-#if defined(HAVE_LEFDEF)
+//#if defined(HAVE_LEFDEF)
     LefParser::setGdsForeignDirectory( path );
-#endif
+//#endif
   }
 
 

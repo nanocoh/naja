@@ -76,10 +76,12 @@ class PNLDesign final: public naja::SNL::SNLObject {
 
     void detachNet(naja::SNL::SNLID::DesignObjectID id);
     naja::SNL::SNLName getName() const { return name_; }
-    void setName(const naja::SNL::SNLName& name) { name_ = name; }
+    void setName(const naja::SNL::SNLName& name);
+    bool isAnonymous() const { return name_.empty(); }
     const auto& getNets() const { return nets_; }
     const auto& getTerms() const { return terms_; }
     void setAbutmentBox(const PNLBox& abutmentBox);
+    const PNLBox& getAbutmentBox() const { return abutmentBox_; }
 
     const std::vector<PNLInstance*>& getInstances() const { return instances_; }
 
