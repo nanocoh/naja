@@ -37,6 +37,12 @@ using namespace naja::PNL;
 
 namespace {
 
+struct Comparator {
+    bool operator()(PNLDesign* a, PNLDesign* b) const {
+        return a->getSNLID() > b->getSNLID();
+    }
+};
+
 #define  CHECK_STATUS(status)         if ((status) != 0) return checkStatus(status);
 #define  RETURN_CHECK_STATUS(status)  return checkStatus(status);
 
@@ -135,7 +141,7 @@ namespace {
 
   class LefDriver {
     public:
-      static void               drive                 ( const set<PNLDesign*>&
+      static void               drive                 ( const set<PNLDesign*, Comparator>&
                                                       , const string& libraryName
                                                       , unsigned int  flags
                                                       );
@@ -146,13 +152,13 @@ namespace {
                                ~LefDriver             ();
              int                write                 ();
     private:                                          
-                                LefDriver             ( const set<PNLDesign*>&
+                                LefDriver             ( const set<PNLDesign*, Comparator>&
                                                       , const string& libraryName
                                                       , unsigned int  flags
                                                       , FILE*
                                                       );
       inline unsigned int       getFlags              () const;
-      inline const set<PNLDesign*>   getPNLDesigns              () const;
+      inline const set<PNLDesign*, Comparator>   getPNLDesigns              () const;
       inline const string&      getSNLLibraryName        () const;
       //inline AllianceFramework* getFramework          ();
       inline int                getStatus             () const;
@@ -184,7 +190,7 @@ namespace {
       static PNLUnit::Unit          _sliceHeight;
       static PNLUnit::Unit          _pitchWidth;
              unsigned int       _flags;
-             const set<PNLDesign*>   _cells;
+             const set<PNLDesign*, Comparator>   _cells;
              string             _libraryName;
              FILE*              _lefStream;
              int                _status;
@@ -203,12 +209,12 @@ namespace {
          PNLUnit::Unit          LefDriver::getPitchWidth  () { return _pitchWidth; }; 
   //inline AllianceFramework* LefDriver::getFramework   () { return _framework; }
   inline unsigned int       LefDriver::getFlags       () const { return _flags; }
-  inline const set<PNLDesign*>   LefDriver::getPNLDesigns       () const { return _cells; }
+  inline const set<PNLDesign*, Comparator>   LefDriver::getPNLDesigns       () const { return _cells; }
   inline int                LefDriver::getStatus      () const { return _status; }
   inline const string&      LefDriver::getSNLLibraryName () const { return _libraryName; }
 
 
-  LefDriver::LefDriver ( const set<PNLDesign*>& cells, const string& libraryName, unsigned int flags, FILE* lefStream )
+  LefDriver::LefDriver ( const set<PNLDesign*, Comparator>& cells, const string& libraryName, unsigned int flags, FILE* lefStream )
     : _flags      (flags)
     , _cells      (cells)
     , _libraryName(libraryName)
@@ -643,8 +649,8 @@ namespace {
   {
     LefDriver* driver = (LefDriver*)udata;
 
-    const set<PNLDesign*>&          cells = driver->getPNLDesigns ();
-    set<PNLDesign*>::const_iterator icell = cells.begin();
+    const set<PNLDesign*, Comparator>&          cells = driver->getPNLDesigns ();
+    set<PNLDesign*, Comparator>::const_iterator icell = cells.begin();
     for ( ; (icell != cells.end()) and (driver->getStatus() == 0) ; ++icell ) {
       driver->_driveMacro ( *icell );
     }
@@ -751,7 +757,7 @@ namespace {
   }
 
 
-  void  LefDriver::drive ( const set<PNLDesign*>& cells, const string& libraryName, unsigned int flags )
+  void  LefDriver::drive ( const set<PNLDesign*, Comparator>& cells, const string& libraryName, unsigned int flags )
   {
     FILE* lefStream = NULL;
     try {
@@ -789,7 +795,7 @@ namespace {
   void  LefExport::drive ( PNLDesign* cell, unsigned int flags )
   {
     string     libraryName = "symbolic";
-    set<PNLDesign*> cells;
+    set<PNLDesign*, Comparator> cells;
 
     if ( cell != NULL ) {
       libraryName = cell->getName().getString() + "_export";
@@ -816,7 +822,7 @@ namespace {
   void  LefExport::drive ( SNLLibrary* library, unsigned int flags )
   {
     string     libraryName = "symbolic";
-    set<PNLDesign*> cells;
+    set<PNLDesign*, Comparator> cells;
 
     if ( library != NULL ) {
       libraryName = library->getName().getString();
@@ -826,6 +832,5 @@ namespace {
         cells.insert ( icell );
       }
     }
-
     LefDriver::drive ( cells, libraryName, flags );
   }
