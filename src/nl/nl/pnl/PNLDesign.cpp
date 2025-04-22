@@ -62,7 +62,7 @@ PNLDesign* PNLDesign::create(NLLibrary* library, const Type& type, const NLName&
 PNLDesign* PNLDesign::create(NLLibrary* library, NLID::DesignID id, Type type, const NLName& name) {
   preCreate(library, id, type, name);
   PNLDesign* design = new PNLDesign(library, id, type, name);
-  design->postCreate();
+  design->postCreateAndSetID();
   return design;
 }
 
@@ -70,6 +70,9 @@ PNLDesign* PNLDesign::create(NLLibrary* library, NLID::DesignID id, Type type, c
 void PNLDesign::postCreateAndSetID() {
   super::postCreate();
   library_->addPNLDesignAndSetID(this);
+  printf("PNLDesign %s\n", getName().getString().c_str());
+  assert(library_->getPNLDesign(getID()) == this);
+  assert(library_->getPNLDesign(getName()) == this);
 }
 
 void PNLDesign::preCreate(const NLLibrary* library, Type type, const NLName& name) {
@@ -351,6 +354,12 @@ void PNLDesign::addNetAndSetID(PNLNet* net) {
   addNet(net);
 }
 
+PNLNet* PNLDesign::addNet(const NLName& name) {
+  PNLNet* net = PNLScalarNet::create(this, name);
+  addNetAndSetID(net);
+  return net;
+}
+
 void PNLDesign::addNet(PNLNet* net) {
   nets_.insert(*net);
   if (not net->getName().empty()) {
@@ -389,6 +398,12 @@ void PNLDesign::addTermAndSetID(PNLTerm* term) {
     term->setID(termID);
   }
   addTerm(term);
+}
+
+PNLTerm* PNLDesign::addTerm(const NLName& name) {
+  PNLTerm* term = PNLScalarTerm::create(this, PNLTerm::Direction::InOut, name);
+  addTermAndSetID(term);
+  return term;
 }
 
 void PNLDesign::addTerm(PNLTerm* term) {
@@ -518,6 +533,26 @@ NajaCollection<PNLInstance*> PNLDesign::getPrimitiveInstances() const {
 NajaCollection<PNLInstance*> PNLDesign::getNonPrimitiveInstances() const {
   auto filter = [](const PNLInstance* instance) { return not instance->getModel()->isPrimitive(); };
   return getInstances().getSubCollection(filter);
+}
+
+void PNLDesign::setName(const naja::NL::NLName& name) {
+  if (name_ == name) {
+    return;
+  }
+  if (not name.empty()) {
+    /* check collision */
+    if (auto collision = getLibrary()->getPNLDesign(name)) {
+      std::ostringstream reason;
+      reason << "In library " << getLibrary()->getString()
+        << ", cannot rename " << getString() << " to "
+        << name.getString() << ", another Design " << collision->getString()
+        << " has already this name.";
+      throw NLException(reason.str());
+    }
+  }
+  auto previousName = getName();
+  name_ = name;
+  getLibrary()->rename(this, previousName);
 }
 
 }  // namespace NL

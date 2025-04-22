@@ -78,6 +78,7 @@ class PNLDesign final: public NLObject {
 
     /// \return NLName of this PNLDesign. 
     NLName getName() const { return name_; }
+    void setName(const NLName& name);
     /// \return true if this PNLDesign is anonymous.
     bool isAnonymous() const { return name_.empty(); }
 
@@ -117,6 +118,7 @@ class PNLDesign final: public NLObject {
     PNLNet* getNet(const NLName& name) const;
     PNLNet* getNet(NLID::DesignObjectID id) const;
 
+    PNLNet* addNet(const NLName& name);
     void addNet(PNLNet* net);
     void addNetAndSetID(PNLNet* net);
     void removeNet(PNLNet* net);
@@ -128,6 +130,7 @@ class PNLDesign final: public NLObject {
     void rename(PNLNet* net, const NLName& previousName);
     void rename(PNLInstance* instance, const NLName& previousName);
 
+    PNLTerm* addTerm(const NLName& name);
     void addTerm(PNLTerm* term);
     void addTermAndSetID(PNLTerm* term);
     void removeTerm(PNLTerm* term);
@@ -159,6 +162,9 @@ class PNLDesign final: public NLObject {
     const PNLBox& getAbutmentBox() const { return abutmentBox_; }
     //const PNLBox& getBoundingBox() const { return boundingBox_; }
 
+    void setTerminalNetlist(bool terminalNetlist) { terminalNetlist_ = terminalNetlist; }
+    bool isTerminalNetlist() const { return terminalNetlist_; }
+
   private:
     PNLDesign(NLLibrary* library, const Type& type = Type::Standard, const NLName& name = NLName());
     PNLDesign(NLLibrary* library, NLID::DesignID id, Type type, const NLName& name);
@@ -187,6 +193,8 @@ class PNLDesign final: public NLObject {
     PNLDesignObjectNameIDMap            netNameIDMap_       {};
     PNLBox                              abutmentBox_;
     PNLBox                              boundingBox_;
+    bool                                terminalNetlist_ = false;
+
 };
 
 }} // namespace NL // namespace naja
