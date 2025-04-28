@@ -290,7 +290,7 @@ namespace {
 
          //AllianceFramework* DefParser::getFramework             () { return _framework; }
   inline void               DefParser::setUnits                 ( double units ) { _defUnits = 1/units; }
-  inline PNLBox::Unit          DefParser::fromDefUnits             ( int u ) { return PNLUnit::fromPhysical(_defUnits*(double)u,PNLUnit::UnitPower::Micro); }
+  inline PNLBox::Unit          DefParser::fromDefUnits             ( int u ) { return u;/*PNLUnit::fromPhysical(_defUnits*(double)u,PNLUnit::UnitPower::Micro);*/ }
   inline bool               DefParser::isSky130                 () const { return _flags & Sky130; }
   inline bool               DefParser::hasErrors                () { return not _errors.empty(); }
   inline unsigned int       DefParser::getFlags                 () const { return _flags; }
@@ -429,6 +429,7 @@ namespace {
   {
     //_cell = DefParser::getFramework()->createPNLDesign ( name, NULL );
     _cell = PNLDesign::create( getLibrary(true), NLName(name) );
+    _cell->setClassType(PNLDesign::ClassType::BLOCK);
     addSupplyPNLNets ( _cell );
     return _cell;
   }

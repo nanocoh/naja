@@ -240,7 +240,7 @@ namespace {
 
 
          int           DefDriver::getUnits       () { return _units; }
-         int           DefDriver::toDefUnits     ( PNLBox::Unit u ) { return (int)(round(PNLUnit::toMicrons(u)*_units)); }
+         int           DefDriver::toDefUnits     ( PNLBox::Unit u ) { return u;/*(int)(round(PNLUnit::toMicrons(u)*_units));*/ }
          PNLBox::Unit     DefDriver::getSliceHeight () { return _sliceHeight; }
          PNLBox::Unit     DefDriver::getPitchWidth  () { return _pitchWidth; }; 
   inline PNLDesign*         DefDriver::getDesign        () { return _cell; }

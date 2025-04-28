@@ -139,7 +139,7 @@ int main(int argc, char* argv[]) {
       printf("- Net: %s\n", net->getName().getString().c_str());
     }
   }
-  LefExport::drive(lib, LefExport::WithTechnology);
+  
   naja::NL::PNLDesign* design = DefImport::load("./file.def", DefImport::FitAbOnDesigns, lib->getDB());
   for (auto instance : design->getInstances()) {
     printf("instance: %s\n", instance->getName().getString().c_str());
@@ -151,6 +151,7 @@ int main(int argc, char* argv[]) {
       printf("--term(%s): %s\n", term->getInstance()->getName().getString().c_str(), term->getName().getString().c_str());
     }
   }
+  LefExport::drive(lib, LefExport::WithTechnology);
   DefExport::drive(design, DefExport::WithLEF);
   printf("Done\n");
 }

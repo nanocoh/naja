@@ -48,6 +48,25 @@ class PNLDesign final: public NLObject {
         private:
           TypeEnum typeEnum_;
     };
+
+     class ClassType {
+      public:
+        enum ClassTypeEnum {
+          NONE, 
+          CORE, CORE_FEEDTHRU, CORE_TIEHIGH, CORE_TIELOW, CORE_SPACER, CORE_ANTENNACELL, CORE_WELLTAP,
+          PAD, PAD_INPUT, PAD_OUTPUT, PAD_INOUT, PAD_POWER, PAD_SPACER, PAD_AREAIO, 
+          BLOCK, BLACKBOX, SOFT_MACRO, 
+          ENDCAP_PRE, ENDCAP_POST, ENDCAP_TOPLEFT, ENDCAP_TOPRIGHT, ENDCAP_BOTTOMLEFT, ENDCAP_BOTTOMRIGHT, 
+          COVER, COVER_BUMP, RING
+        };
+        ClassType(const ClassTypeEnum& typeEnum);
+        ClassType(const ClassType&) = default;
+        ClassType& operator=(const ClassType&) = default;
+        operator const ClassTypeEnum&() const {return typeEnum_;}
+        std::string getString() const;
+        private:
+          ClassTypeEnum typeEnum_;
+    };
     
     /**
      * \brief Create a PNLDesign.
@@ -154,6 +173,9 @@ class PNLDesign final: public NLObject {
     ///\warning setType cannot be called to set a design as a primitive.
     void setType(Type type);
 
+    void setClassType(ClassType type) { classType_ = type; }
+    ClassType getClassType() const { return classType_; }
+
     NajaCollection<PNLInstance*> getInstances() const;
     NajaCollection<PNLInstance*> getPrimitiveInstances() const;
     NajaCollection<PNLInstance*> getNonPrimitiveInstances() const;
@@ -187,6 +209,7 @@ class PNLDesign final: public NLObject {
     PNLDesignObjectNameIDMap            instanceNameIDMap_  {};
     PNLDesignSlaveInstances             slaveInstances_     {};
     Type                                type_               { Type::Standard };
+    ClassType                           classType_          { ClassType::NONE };
     PNLDesignTerms                      terms_              {};
     PNLDesignObjectNameIDMap            termNameIDMap_      {};
     PNLDesignNets                       nets_               {};

@@ -30,6 +30,8 @@
 // for ostringstream
 #include <sstream>
 #include "PNLUnit.h"
+#include "PNLTechnology.h"
+#include "PNLSite.h"
 
 using namespace std;
 using namespace naja::NL;
@@ -146,7 +148,7 @@ struct Comparator {
                                                       , unsigned int  flags
                                                       );
       static int                getUnits              ();
-      static double             toLefUnits            ( PNLBox::Unit );
+      //static double             toLefUnits            ( PNLBox::Unit );
       static PNLBox::Unit          getSliceHeight        ();
       static PNLBox::Unit          getPitchWidth         ();
                                ~LefDriver             ();
@@ -204,7 +206,7 @@ struct Comparator {
 
 
          int                LefDriver::getUnits       () { return _units; }
-         double             LefDriver::toLefUnits     ( PNLBox::Unit u ) { return PNLUnit::toMicrons(u)/**getUnits()*/; }
+         //double             LefDriver::toLefUnits     ( PNLBox::Unit u ) { return u;/*PNLUnit::toMicrons(u)*//**getUnits()*/; }
          PNLBox::Unit          LefDriver::getSliceHeight () { return _sliceHeight; }
          PNLBox::Unit          LefDriver::getPitchWidth  () { return _pitchWidth; }; 
   //inline AllianceFramework* LefDriver::getFramework   () { return _framework; }
@@ -228,10 +230,15 @@ struct Comparator {
     //   _sliceHeight = cg->getSliceHeight ();
     //   _pitchWidth  = cg->getPitch       ();
     // }
-    _sliceHeight = 1;// TODO fix
-    _pitchWidth  = 1;// TODO fix
 
-    _units = PNLUnit::toGrid(PNLUnit::fromMicrons(1.0));
+    // PNLTechnology* tech = PNLTechnology::getOrCreate();
+    // PNLSite* site = tech->getSiteByClass("CORE");
+    // _sliceHeight = site->getHeight();
+    // _pitchWidth  = site->getWidth();
+    // printf("sliceHeight %ld pitchWidth %ld\n", _sliceHeight, _pitchWidth);
+    // printf("sliceHeight %f pitchWidth %f\n", PNLUnit::toMicrons(_sliceHeight), PNLUnit::toMicrons(_pitchWidth));
+
+    // _units = PNLUnit::toGrid(PNLUnit::fromMicrons(1.0));
 
     _status = lefwInitCbk ( _lefStream );
     if ( _status != 0 ) return;
@@ -329,14 +336,16 @@ struct Comparator {
     CHECK_STATUS(_status);
     printf("a\n");
     const PNLBox&         abutmentBox   ( cell->getAbutmentBox() );
-    double      pitchWidth    = toLefUnits ( LefDriver::getPitchWidth () );
-    double      sliceHeight   = toLefUnits ( LefDriver::getSliceHeight() );
-    int         slices        = (int)floor( abutmentBox.getHeight() / LefDriver::getSliceHeight() );
-    int         pitchs        = (int)floor( abutmentBox.getWidth () / LefDriver::getPitchWidth () );
+    //double      pitchWidth    = toLefUnits ( LefDriver::getPitchWidth () );
+    //double      sliceHeight   = toLefUnits ( LefDriver::getSliceHeight() );
+    // int         slices        = (int)floor( abutmentBox.getHeight() / LefDriver::getSliceHeight() );
+    // int         pitchs        = (int)floor( abutmentBox.getWidth () / LefDriver::getPitchWidth () );
+    // int         slices        =  abutmentBox.getHeight() ;
+    // int         pitchs        =  abutmentBox.getWidth ();
     const char* macroClass    = NULL;
     const char* macroSubClass = NULL;
-    printf("slices %d\n", slices);
-    if ( slices > 1 ) {
+    //printf("slices %d\n", slices);
+    /*if ( slices > 1 ) {
       printf("case1\n");
       macroClass    = "BLOCK";
       macroSubClass = "BLACKBOX";
@@ -344,17 +353,130 @@ struct Comparator {
       printf("case2\n");
       macroClass = "CORE";
       //if ( CatalogExtension::isFeed(cell) ) macroSubClass = "SPACER";
+    }*/
+    // CORE, CORE_FEEDTHRU, CORE_TIEHIGH, CORE_TIELOW, CORE_SPACER, CORE_ANTENNACELL, CORE_WELLTAP,
+    //       PAD, PAD_INPUT, PAD_OUTPUT, PAD_INOUT, PAD_POWER, PAD_SPACER, PAD_AREAIO, 
+    //       BLOCK, BLACKBOX, SOFT_MACRO, 
+    //       ENDCAP_PRE, ENDCAP_POST, ENDCAP_TOPLEFT, ENDCAP_TOPRIGHT, ENDCAP_BOTTOMLEFT, ENDCAP_BOTTOMRIGHT, 
+    //       COVER, COVER_BUMP, RING
+    switch (cell->getClassType()) {
+        case PNLDesign::ClassType::CORE:
+            macroClass = "CORE";
+            break;
+        case PNLDesign::ClassType::CORE_FEEDTHRU:
+            macroClass = "CORE";
+            macroSubClass = "FEEDTHRU";
+            break;
+        case PNLDesign::ClassType::CORE_TIEHIGH:
+            macroClass = "CORE";
+            macroSubClass = "TIEHIGH";
+            break;
+        case PNLDesign::ClassType::CORE_TIELOW:
+            macroClass = "CORE";
+            macroSubClass = "TIELOW";
+            break;
+        case PNLDesign::ClassType::CORE_SPACER:
+            macroClass = "CORE";
+            macroSubClass = "SPACER";
+            break;
+        case PNLDesign::ClassType::CORE_ANTENNACELL:
+            macroClass = "CORE ANTENNACELL";
+            break;
+        case PNLDesign::ClassType::CORE_WELLTAP:
+            macroClass = "CORE";
+            macroSubClass = "WELLTAP";
+            break;
+        case PNLDesign::ClassType::PAD:
+            macroClass = "PAD";
+            break;
+        case PNLDesign::ClassType::PAD_INPUT:
+            macroClass = "PAD";
+            macroSubClass = "INPUT";
+            break;
+        case PNLDesign::ClassType::PAD_OUTPUT:
+            macroClass = "PAD";
+            macroSubClass = "OUTPUT";
+            break;
+        case PNLDesign::ClassType::PAD_INOUT:
+            macroClass = "PAD";
+            macroSubClass = "INOUT";
+            break;
+        case PNLDesign::ClassType::PAD_POWER:
+            macroClass = "PAD";
+            macroSubClass = "POWER";
+            break;
+        case PNLDesign::ClassType::PAD_SPACER:
+            macroClass = "PAD";
+            macroSubClass = "SPACER";
+            break;
+        case PNLDesign::ClassType::PAD_AREAIO:
+            macroClass = "PAD";
+            macroSubClass = "AREAIO";
+            break;
+        case PNLDesign::ClassType::BLOCK:
+            macroClass = "BLOCK";
+            break;
+        case PNLDesign::ClassType::BLACKBOX:
+            macroClass = "BLACKBOX";
+            break;
+        case PNLDesign::ClassType::SOFT_MACRO:
+            macroClass = "SOFT";
+            macroSubClass = "MACRO";
+            break;
+        case PNLDesign::ClassType::ENDCAP_PRE:
+            macroClass = "ENDCAP";
+            macroSubClass = "PRE";
+            break;
+        case PNLDesign::ClassType::ENDCAP_POST:
+            macroClass = "ENDCAP";
+            macroSubClass = "POST";
+            break;
+        case PNLDesign::ClassType::ENDCAP_TOPLEFT:
+            macroClass = "ENDCAP";
+            macroSubClass = "TOPLEFT";
+            break;
+        case PNLDesign::ClassType::ENDCAP_TOPRIGHT:
+            macroClass = "ENDCAP";
+            macroSubClass = "TOPRIGHT";
+            break;
+        case PNLDesign::ClassType::ENDCAP_BOTTOMLEFT: 
+            macroClass = "ENDCAP";
+            macroSubClass = "BOTTOMLEFT";
+            break;
+        case PNLDesign::ClassType::ENDCAP_BOTTOMRIGHT:
+            macroClass = "ENDCAP";
+            macroSubClass = "BOTTOMRIGHT";
+            break;
+        case PNLDesign::ClassType::COVER:
+            macroClass = "COVER";
+            break;
+        case PNLDesign::ClassType::COVER_BUMP:  
+            macroClass = "COVER";
+            macroSubClass = "BUMP";
+            break;
+        case PNLDesign::ClassType::RING:
+            macroClass = "RING";
+            break;
+        case PNLDesign::ClassType::NONE:
+            break;
+        default:
+            assert(false);
     }
+    printf("cell name %s\n", cell->getName().getString().c_str());
+    printf("macro class type %s\n", cell->getClassType().getString().c_str());
     printf("%p\n",macroClass);
-    printf("%s\n",macroClass);
+    printf("macro class %s\n",macroClass);
     printf("%p\n",macroSubClass);
     printf("%s\n",macroSubClass);
     printf("a1\n");
+
     _status = lefwMacroClass ( macroClass, macroSubClass );
     CHECK_STATUS(_status);
     printf("b\n");
-    double originX = toLefUnits ( abutmentBox.getLeft() );
-    double originY = toLefUnits ( abutmentBox.getBottom() );
+    // double originX = toLefUnits ( abutmentBox.getLeft() );
+    // double originY = toLefUnits ( abutmentBox.getBottom() );
+    double originX = abutmentBox.getLeft();
+    double originY = abutmentBox.getBottom();
     //if ( (originX != 0.0) or (originY != 0.0) )
       // cerr << Warning("PNLDesign <%s> origin is in (%s,%s), shifting to (0,0)."
       //                ,cell->getName().getString().c_str()
@@ -364,8 +486,10 @@ struct Comparator {
     _status = lefwMacroOrigin ( 0.0, 0.0 );
     CHECK_STATUS(_status);
     printf("c\n");
-    double sizeX = toLefUnits ( abutmentBox.getWidth () );
-    double sizeY = toLefUnits ( abutmentBox.getHeight() );
+    // double sizeX = toLefUnits ( abutmentBox.getWidth () );
+    // double sizeY = toLefUnits ( abutmentBox.getHeight() );
+    double sizeX = abutmentBox.getWidth ();
+    double sizeY = abutmentBox.getHeight();
     _status = lefwMacroSize ( sizeX, sizeY );
     CHECK_STATUS(_status);
     printf("d\n");
@@ -375,20 +499,20 @@ struct Comparator {
     _status = lefwMacroSite ( "core" );
     CHECK_STATUS(_status);
     printf("f\n");
-    if ( slices > 1 ) {
-      for ( int islice=0 ; islice<slices ; ++islice ) {
-        _status = lefwMacroSitePatternStr ( "core"                        // site name.
-                                          , originX                       // X origin.
-                                          , originY + sliceHeight*islice  // Y origin.
-                                          , (islice % 2) ? "FS" : "N"     // orientation.
-                                          , pitchs                        // num X.
-                                          , 1                             // num Y.
-                                          , pitchWidth                    // space X (STEP X).
-                                          , sliceHeight                   // space Y (STEP Y).
-                                          );
-        CHECK_STATUS(_status);
-      }
-    }
+    // if ( slices > 1 ) {
+    //   for ( int islice=0 ; islice<slices ; ++islice ) {
+    //     _status = lefwMacroSitePatternStr ( "core"                        // site name.
+    //                                       , originX                       // X origin.
+    //                                       , originY /*+ sliceHeight*islice*/  // Y origin.
+    //                                       , (islice % 2) ? "FS" : "N"     // orientation.
+    //                                       , pitchs                        // num X.
+    //                                       , 0                             // num Y.
+    //                                       , 0                    // space X (STEP X).
+    //                                       , 0                   // space Y (STEP Y).
+    //                                       );
+    //     CHECK_STATUS(_status);
+    //   }
+    // }
 
     PNLNet* blockagePNLNet = NULL;
 
@@ -458,7 +582,7 @@ struct Comparator {
     double sliceHeight       = toLefUnits ( LefDriver::getSliceHeight() );
 #endif
 
-    double METAL1HalfMinDist = toLefUnits ( PNLUnit::lambda(1.0) );
+   //double METAL1HalfMinDist = toLefUnits ( PNLUnit::lambda(1.0) );
 
 #if 0
     _status = lefwMacroObsLayer ( "METAL1", METAL1HalfMinDist );
@@ -580,7 +704,7 @@ struct Comparator {
 
     status = lefwEndUnits();
 
-    status = lefwManufacturingGrid ( LefDriver::toLefUnits(PNLUnit::fromGrid(1.0)) );
+    status = lefwManufacturingGrid ( PNLTechnology::getOrCreate()->getManufacturingGrid()/*LefDriver::toLefUnits(PNLUnit::fromGrid(1.0))*/ );
 
     if ( status != 0 ) return driver->checkStatus(status);
 
@@ -614,13 +738,26 @@ struct Comparator {
   int  LefDriver::_siteCbk ( lefwCallbackType_e, lefiUserData udata )
   {
     LefDriver* driver = (LefDriver*)udata;
-    int status = lefwSite ( "core"
-                          , "CORE"
-                          , "Y"
-                          , toLefUnits(LefDriver::getPitchWidth ())
-                          , toLefUnits(LefDriver::getSliceHeight())
-                          );
-    if ( status != 0 ) return driver->checkStatus(status);
+    for (PNLSite* site : PNLTechnology::getOrCreate()->getSites()) {
+     // if (site->getClass() == "CORE") {
+        lefwNewLine ();
+        int status = lefwSite ( site->getName().getString().c_str()
+                , site->getClass().c_str()
+                , "Y"
+                , site->getWidth()
+                , site->getWidth()
+                );
+
+        if ( status != 0 ) return driver->checkStatus(status);
+      //}
+    }
+    // int status = lefwSite ( "core"
+    //                       , "CORE"
+    //                       , "Y"
+    //                       , toLefUnits(LefDriver::getPitchWidth ())
+    //                       , toLefUnits(LefDriver::getSliceHeight())
+    //                      );
+    
 
     return driver->checkStatus(lefwEndSite("core"));
   }

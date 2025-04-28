@@ -2943,6 +2943,7 @@ void
 lefiMacro::setClass(const char *name)
 {
     strcpy(macroClass_, CASE(name));
+    printf("set class %s length %lu\n", name, strlen(name));
     hasClass_ = 1;
 }
 
