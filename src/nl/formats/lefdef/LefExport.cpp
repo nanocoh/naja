@@ -496,7 +496,9 @@ struct Comparator {
     _status = lefwMacroSymmetry ( "X Y" );
     CHECK_STATUS(_status);
     printf("e\n");
-    _status = lefwMacroSite ( "core" );
+    if (cell->getSite() != NULL) {  
+      _status = lefwMacroSite ( cell->getSite()->getName().getString().c_str() );
+    }
     CHECK_STATUS(_status);
     printf("f\n");
     // if ( slices > 1 ) {
@@ -735,32 +737,62 @@ struct Comparator {
   }
 
 
-  int  LefDriver::_siteCbk ( lefwCallbackType_e, lefiUserData udata )
-  {
+  int LefDriver::_siteCbk(lefwCallbackType_e, lefiUserData udata) {
+    printf("LefDriver::_siteCbk triggered\n");
     LefDriver* driver = (LefDriver*)udata;
+
+    // Iterate through all sites
     for (PNLSite* site : PNLTechnology::getOrCreate()->getSites()) {
-     // if (site->getClass() == "CORE") {
-        lefwNewLine ();
-        int status = lefwSite ( site->getName().getString().c_str()
-                , site->getClass().c_str()
-                , "Y"
-                , site->getWidth()
-                , site->getWidth()
-                );
+        // Debugging site details
+        printf("Processing SITE: Name=%s, Class=%s, Width=%ld, Height=%ld\n",
+               site->getName().getString().c_str(),
+               site->getClass().c_str(),
+               site->getWidth(),
+               site->getHeight());
 
-        if ( status != 0 ) return driver->checkStatus(status);
-      //}
+        // Call lefwSite
+        std::string symmetry = "";
+        switch (site->getSymmetry()) {
+          case PNLSite::Symmetry::X:
+            symmetry = "X";
+            break;
+          case PNLSite::Symmetry::Y:
+            symmetry = "Y";
+            break;
+          case PNLSite::Symmetry::X_Y:
+            symmetry = "X Y";
+            break;
+          case PNLSite::Symmetry::R90:
+            symmetry = "R90";
+            break;
+          default:
+            break;
+        }
+        int status = lefwSite(site->getName().getString().c_str(),
+                              site->getClass().c_str(),
+                              symmetry == "" ? nullptr : symmetry.c_str(),  // Default orientation
+                              site->getWidth(),
+                              site->getHeight());
+
+        // Handle errors
+        printf("Status for lefwSite: %d\n", status);
+        if (status != 0) {
+            printf("Error during lefwSite for %s\n", site->getName().getString().c_str());
+            return driver->checkStatus(status); // Handle error status
+        }
+
+        // End each site to ensure proper state reset
+        status = lefwEndSite(site->getName().getString().c_str());
+        if (status != 0) {
+            printf("Error during lefwEndSite for %s\n", site->getName().getString().c_str());
+            return driver->checkStatus(status);
+        }
     }
-    // int status = lefwSite ( "core"
-    //                       , "CORE"
-    //                       , "Y"
-    //                       , toLefUnits(LefDriver::getPitchWidth ())
-    //                       , toLefUnits(LefDriver::getSliceHeight())
-    //                      );
-    
 
-    return driver->checkStatus(lefwEndSite("core"));
-  }
+    // Callback completed successfully
+    return 0;
+}
+
 
 
   int  LefDriver::_extCbk ( lefwCallbackType_e, lefiUserData udata )

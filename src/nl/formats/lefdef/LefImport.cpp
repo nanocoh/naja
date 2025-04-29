@@ -762,72 +762,80 @@ int LefParser::_siteCbk(lefrCallbackType_e c, lefiSite* site, lefiUserData ud) {
   printf("LefParser::_siteCbk\n");
   LefParser* parser = (LefParser*)ud;
   // AllianceFramework* af     = AllianceFramework::get();
-
+  string siteClass = "";
   if (site->hasClass()) {
-    string siteClass = site->siteClass();
+    siteClass = site->siteClass();
     boost::to_upper(siteClass);
+    //printf("LefParser::_siteCbk: %s %s %lu %lu\n", site->name(),
+    //       siteClass.c_str(), lefSiteWidth, lefSiteHeight);
+    // if (siteClass == "CORE") {
+    //   // PNLDesignGauge* gauge = parser->getPNLDesignGauge();
+    //   // if (not gauge)
+    //   //   throw Error( "LefParser::_siteCbk(): Default gauge is not defined.
+    //   //   Aborting." );
 
-    PNLBox::Unit lefSiteWidth =
+    //   // PNLBox::Unit  crlSliceStep   = gauge->getSliceStep  ();
+    //   // PNLBox::Unit  crlSliceHeight = gauge->getSliceHeight();
+
+    //   // if (not parser->getCoreSiteX()
+    //   //    or ((parser->getCoreSiteX() != crlSliceStep) and
+    //   //    (parser->getCoreSiteY() != crlSliceHeight)) ) {
+    //   parser->setCoreSite(lefSiteWidth, lefSiteHeight);
+    //   // PNLSite::create( NLName(site->name()), siteClass, lefSiteWidth,
+    //   // lefSiteHeight ); if ( (crlSliceStep == lefSiteWidth) and
+    //   // (crlSliceHeight == lefSiteHeight) ) cerr << "     - Site \"" <<
+    //   // site->name() << "\" of class CORE match the Coriolis PNLDesign gauge."
+    //   // << endl;
+    //   //}
+    // } else if (siteClass == "PAD") {
+    //   string name = string("LEF.") + site->name();
+    //   // PNLDesignGauge* cg   = af->getPNLDesignGauge( name );
+
+    //   // if (cg) {
+    //   //   if ( (cg->getSliceStep() != lefSiteWidth) or (cg->getSliceHeight() !=
+    //   //   lefSiteHeight)) {
+    //   //     cerr << "     - Site \"" << site->name() << "\" of class PAD has
+    //   //     mismatched redefinition OVERWRITING." << endl; cerr << " width: "
+    //   //     << PNLUnit::getValueString(cg->getSliceStep  ()) << " vs. " <<
+    //   //     PNLUnit::getValueString(lefSiteWidth)
+    //   //          <<       " height: " <<
+    //   //          PNLUnit::getValueString(cg->getSliceHeight()) << " vs. " <<
+    //   //          PNLUnit::getValueString(lefSiteHeight)
+    //   //          << endl;
+    //   //   //cg->setPitch      ( lefSiteWidth  );
+    //   //     cg->setSliceStep  ( lefSiteWidth  );
+    //   //     cg->setSliceHeight( lefSiteHeight );
+    //   //   }
+    //   //   cg->setFlags( PNLDesignGauge::Flags::Pad );
+    //   // } else {
+    //   //   cg = PNLDesignGauge::create( name.c_str(), "unknown", lefSiteWidth,
+    //   //   lefSiteHeight, lefSiteWidth ); cg->setFlags(
+    //   //   PNLDesignGauge::Flags::Pad ); af->addPNLDesignGauge( cg );
+    //   // }
+    // }
+    // parser->setCoreSite( lefSiteWidth, lefSiteHeight );
+    // PNLSite::create(NLName(site->name()), siteClass, lefSiteWidth,
+    //                 lefSiteHeight);
+    // printf("     - Site \"%s\" of class %s (%lu,%lu) (%f, %f)\n", site->name(),
+    //        siteClass.c_str(), lefSiteWidth, lefSiteHeight, site->sizeX(),
+    //        site->sizeY());
+  }
+  PNLBox::Unit lefSiteWidth =
         site->sizeX();  // PNLUnit::fromPhysical( site->sizeX(), PNLUnit::Micro
                         // );
-    PNLBox::Unit lefSiteHeight =
+  PNLBox::Unit lefSiteHeight =
         site->sizeY();  // PNLUnit::fromPhysical( site->sizeY(), PNLUnit::Micro
-                        // );
-    printf("LefParser::_siteCbk: %s %s %lu %lu\n", site->name(),
-           siteClass.c_str(), lefSiteWidth, lefSiteHeight);
-    if (siteClass == "CORE") {
-      // PNLDesignGauge* gauge = parser->getPNLDesignGauge();
-      // if (not gauge)
-      //   throw Error( "LefParser::_siteCbk(): Default gauge is not defined.
-      //   Aborting." );
-
-      // PNLBox::Unit  crlSliceStep   = gauge->getSliceStep  ();
-      // PNLBox::Unit  crlSliceHeight = gauge->getSliceHeight();
-
-      // if (not parser->getCoreSiteX()
-      //    or ((parser->getCoreSiteX() != crlSliceStep) and
-      //    (parser->getCoreSiteY() != crlSliceHeight)) ) {
-      parser->setCoreSite(lefSiteWidth, lefSiteHeight);
-      // PNLSite::create( NLName(site->name()), siteClass, lefSiteWidth,
-      // lefSiteHeight ); if ( (crlSliceStep == lefSiteWidth) and
-      // (crlSliceHeight == lefSiteHeight) ) cerr << "     - Site \"" <<
-      // site->name() << "\" of class CORE match the Coriolis PNLDesign gauge."
-      // << endl;
-      //}
-    } else if (siteClass == "PAD") {
-      string name = string("LEF.") + site->name();
-      // PNLDesignGauge* cg   = af->getPNLDesignGauge( name );
-
-      // if (cg) {
-      //   if ( (cg->getSliceStep() != lefSiteWidth) or (cg->getSliceHeight() !=
-      //   lefSiteHeight)) {
-      //     cerr << "     - Site \"" << site->name() << "\" of class PAD has
-      //     mismatched redefinition OVERWRITING." << endl; cerr << " width: "
-      //     << PNLUnit::getValueString(cg->getSliceStep  ()) << " vs. " <<
-      //     PNLUnit::getValueString(lefSiteWidth)
-      //          <<       " height: " <<
-      //          PNLUnit::getValueString(cg->getSliceHeight()) << " vs. " <<
-      //          PNLUnit::getValueString(lefSiteHeight)
-      //          << endl;
-      //   //cg->setPitch      ( lefSiteWidth  );
-      //     cg->setSliceStep  ( lefSiteWidth  );
-      //     cg->setSliceHeight( lefSiteHeight );
-      //   }
-      //   cg->setFlags( PNLDesignGauge::Flags::Pad );
-      // } else {
-      //   cg = PNLDesignGauge::create( name.c_str(), "unknown", lefSiteWidth,
-      //   lefSiteHeight, lefSiteWidth ); cg->setFlags(
-      //   PNLDesignGauge::Flags::Pad ); af->addPNLDesignGauge( cg );
-      // }
-    }
-    // parser->setCoreSite( lefSiteWidth, lefSiteHeight );
-    PNLSite::create(NLName(site->name()), siteClass, lefSiteWidth,
+  auto pnlSite = PNLSite::create(NLName(site->name()), siteClass, lefSiteWidth,
                     lefSiteHeight);
-    printf("     - Site \"%s\" of class %s (%lu,%lu) (%f, %f)\n", site->name(),
-           siteClass.c_str(), lefSiteWidth, lefSiteHeight, site->sizeX(),
-           site->sizeY());
+  if (site->hasXSymmetry() && site->hasYSymmetry()) {
+    pnlSite->setSymmetry(PNLSite::Symmetry::X_Y);
+  } else if (site->hasXSymmetry()) {
+    pnlSite->setSymmetry(PNLSite::Symmetry::X);
+  } else if (site->hasYSymmetry()) {
+    pnlSite->setSymmetry(PNLSite::Symmetry::Y);
+  } else if (site->has90Symmetry()) {
+    pnlSite->setSymmetry(PNLSite::Symmetry::R90);
   }
-
   return 0;
 }
 
@@ -1090,27 +1098,30 @@ int LefParser::_macroCbk(lefrCallbackType_e c,
 
   bool isPad = false;
   string gaugeName = "Unknown SITE";
-  // if (macro->hasSiteName()) {
-  //   gaugeName = string("LEF.") + macro->siteName();
-  //   PNLDesignGauge* cg = af->getPNLDesignGauge( gaugeName );
-  //   if (cg) {
-  //     isPad = cg->isPad();
-  //     if (cg->getSliceHeight() != height) {
-  //       cerr << Warning( "LefParser::_macroCbk(): PNLDesign height %s do not
-  //       match PNLDesignGauge/SITE \"%s\" of %s."
-  //                      , PNLUnit::getValueString(height).c_str()
-  //                      , getString(cg->getName()).c_str()
-  //                      ,
-  //                      PNLUnit::getValueString(cg->getSliceHeight()).c_str()
-  //                      ) << endl;
-  //     }
-  //     parser->setPNLDesignGauge( cg );
-  //   } else {
-  //     cerr << Warning( "LefParser::_macroCbk(): No PNLDesignGauge associated
-  //     to SITE \"%s\"."
-  //                    , macro->siteName() ) << endl;
-  //   }
-  // }
+  if (macro->hasSiteName()) {
+    std::string siteName = macro->siteName();
+    PNLSite* site = PNLTechnology::getOrCreate()->getSiteByName(NLName(siteName));
+    cell->setSite(site);
+    // gaugeName = string("LEF.") + macro->siteName();
+    // PNLDesignGauge* cg = af->getPNLDesignGauge( gaugeName );
+    // if (cg) {
+    //   isPad = cg->isPad();
+    //   if (cg->getSliceHeight() != height) {
+    //     cerr << Warning( "LefParser::_macroCbk(): PNLDesign height %s do not
+    //     match PNLDesignGauge/SITE \"%s\" of %s."
+    //                    , PNLUnit::getValueString(height).c_str()
+    //                    , getString(cg->getName()).c_str()
+    //                    ,
+    //                    PNLUnit::getValueString(cg->getSliceHeight()).c_str()
+    //                    ) << endl;
+    //   }
+    //   parser->setPNLDesignGauge( cg );
+    // } else {
+    //   cerr << Warning( "LefParser::_macroCbk(): No PNLDesignGauge associated
+    //   to SITE \"%s\"."
+    //                  , macro->siteName() ) << endl;
+    // }
+  }
 
   if (not isPad)
     parser->_pinStdPostProcess();

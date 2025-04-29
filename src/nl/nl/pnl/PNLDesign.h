@@ -16,6 +16,7 @@ namespace naja { namespace NL {
 
 class NLDB;
 class NLLibrary;
+class PNLSite;
 
 class PNLDesign final: public NLObject {
   public:
@@ -186,6 +187,8 @@ class PNLDesign final: public NLObject {
 
     void setTerminalNetlist(bool terminalNetlist) { terminalNetlist_ = terminalNetlist; }
     bool isTerminalNetlist() const { return terminalNetlist_; }
+    void setSite(PNLSite* site) { site_ = site; }
+    PNLSite* getSite() const { return site_; }
 
   private:
     PNLDesign(NLLibrary* library, const Type& type = Type::Standard, const NLName& name = NLName());
@@ -217,6 +220,7 @@ class PNLDesign final: public NLObject {
     PNLBox                              abutmentBox_;
     PNLBox                              boundingBox_;
     bool                                terminalNetlist_ = false;
+    PNLSite*                            site_ = nullptr;
 
 };
 
