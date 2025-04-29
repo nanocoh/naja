@@ -20,6 +20,13 @@ class PNLSite;
 
 class PNLDesign final: public NLObject {
   public:
+    enum Symmetry {
+      NONE = 0,
+      X,
+      Y,
+      X_Y,
+      R90
+    };
     friend class NLLibrary;
     using super = NLObject;
     using PNLDesignInstancesHook =
@@ -190,6 +197,9 @@ class PNLDesign final: public NLObject {
     void setSite(PNLSite* site) { site_ = site; }
     PNLSite* getSite() const { return site_; }
 
+    void setSymmetry(Symmetry symmetry) { Symmetry_ = symmetry; }
+    Symmetry getSymmetry() const { return Symmetry_; }
+
   private:
     PNLDesign(NLLibrary* library, const Type& type = Type::Standard, const NLName& name = NLName());
     PNLDesign(NLLibrary* library, NLID::DesignID id, Type type, const NLName& name);
@@ -221,7 +231,7 @@ class PNLDesign final: public NLObject {
     PNLBox                              boundingBox_;
     bool                                terminalNetlist_ = false;
     PNLSite*                            site_ = nullptr;
-
+    Symmetry                            Symmetry_ = NONE;
 };
 
 }} // namespace NL // namespace naja
