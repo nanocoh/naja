@@ -9,29 +9,12 @@
 #include <iostream>
 #include <memory>
 #include "lefrReader.hpp"
-// #include "hurricane/configuration/Configuration.h"
-// #include "hurricane/Error.h"
-// #include "hurricane/Warning.h"
-// #include "hurricane/DataBase.h"
-// #include "hurricane/BasicLayer.h"
-// #include "hurricane/Technology.h"
 #include "PNLNet.h"
 #include "PNLTerm.h"
-// #include "hurricane/Contact.h"
-// #include "hurricane/Horizontal.h"
-// #include "hurricane/Vertical.h"
-// #include "hurricane/Rectilinear.h"
 #include "NLLibrary.h"
 #include "PNLDesign.h"
 #include "PNLPoint.h"
-// #include "hurricane/UpdateSession.h"
-// #include "crlcore/Utilities.h"
-// #include "crlcore/ToolBox.h"
-// #include "crlcore/RoutingGauge.h"
-// #include "crlcore/PNLDesignGauge.h"
-// #include "crlcore/AllianceFramework.h"
 #include "LefImport.h"
-// #include "crlcore/Gds.h"
 #include <fstream>
 #include "NLDB.h"
 #include "NLName.h"
@@ -657,168 +640,16 @@ int LefParser::_unitsCbk(lefrCallbackType_e c,
 int LefParser::_layerCbk(lefrCallbackType_e c,
                          lefiLayer* lefLayer,
                          lefiUserData ud) {
-  printf("LefParser::_layerCbk(): %s\n", lefLayer->name());
-  //   LefParser* parser = (LefParser*)ud;
-
-  //   if (not lefLayer->hasType()) {
-  //     cerr << Warning( "LefParser::_layerCbk(): layer \"%s\" has no TYPE
-  //     (ignored).", lefLayer->name() ); return 0;
-  //   }
-
-  //   Technology* techno = DataBase::getDB()->getTechnology();
-
-  //   string lefType = lefLayer->type();
-  //   boost::to_upper( lefType );
-
-  //   if (lefType == "CUT") {
-  //     Layer* layer = techno->getNthCut( parser->getNthCut() );
-  //     while (parser->isUnmatchedLayer(getString(layer->getName()))) {
-  //       parser->incNthCut();
-  //       cerr << "     - Unmapped techno layer \"" << layer->getName() << "\""
-  //       << endl; layer = techno->getNthCut( parser->getNthCut() );
-  //     }
-  //     if (layer) {
-  //       parser->addLayer( lefLayer->name(), layer );
-  //       parser->incNthCut();
-
-  //       cerr << "     - \"" << lefLayer->name() << "\" map to \"" <<
-  //       layer->getName() << "\"" << endl;
-  //     }
-  //   }
-
-  //   if (lefType == "ROUTING") {
-  //     Layer* layer = techno->getNthMetal( parser->getNthMetal() );
-  //     while (parser->isUnmatchedLayer(getString(layer->getName()))) {
-  //       parser->incNthMetal();
-  //       cerr << "     - Unmapped techno layer \"" << layer->getName() << "\""
-  //       << endl; layer = techno->getNthMetal( parser->getNthMetal() );
-  //     }
-
-  //     if (layer) {
-  //       BasicLayer* basicLayer = layer->getBasicLayers().getFirst();
-  //       parser->addLayer( lefLayer->name(), basicLayer );
-
-  //       cerr << "     - \"" << lefLayer->name() << "\" map to \"" <<
-  //       basicLayer->getName() << "\"" << endl;
-
-  //       RoutingLayerGauge* gauge = parser->getRoutingGauge()->getLayerGauge(
-  //       parser->getNthRouting() );
-
-  //       if (gauge and (layer == gauge->getLayer())) {
-  //         if (lefLayer->hasPitch()) {
-  //           double lefPitch = lefLayer->pitch();
-  //           double crlPitch =
-  //           PNLUnit::toPhysical(gauge->getPitch(),PNLUnit::Micro); if
-  //           (lefPitch > crlPitch)
-  //             cerr << Warning( "LefParser::_layerCbk(): CRL Routing pitch for
-  //             \"%s\" of %fum is less than %fum."
-  //                            , getString( basicLayer->getName() ).c_str() ,
-  //                            crlPitch , lefPitch ) << endl;
-  //         }
-
-  //         if (lefLayer->hasWidth()) {
-  //           double lefWidth = lefLayer->width();
-  //           double crlWidth =
-  //           PNLUnit::toPhysical(gauge->getWireWidth(),PNLUnit::Micro); if
-  //           (lefWidth > crlWidth)
-  //             cerr << Warning( "LefParser::_layerCbk(): CRL Routing wire
-  //             width for \"%s\" of %fum is less than %fum."
-  //                            , getString( basicLayer->getName() ).c_str() ,
-  //                            crlWidth , lefWidth ) << endl;
-  //         }
-
-  //         if (lefLayer->hasDirection()) {
-  //           string lefDirection = lefLayer->direction();
-  //           boost::to_upper( lefDirection );
-
-  //           if ( (lefDirection == "HORIZONTAL") and gauge->isVertical() )
-  //             cerr << Warning( "LefParser::_layerCbk(): CRL Routing direction
-  //             discrepency for \"%s\", LEF is HORIZONTAL."
-  //                            , getString( basicLayer->getName() ).c_str() )
-  //                            << endl;
-
-  //           if ( (lefDirection == "VERTICAL") and gauge->isHorizontal() )
-  //             cerr << Warning( "LefParser::_layerCbk(): CRL Routing direction
-  //             discrepency for \"%s\", LEF is VERTICAL."
-  //                            , getString( basicLayer->getName() ).c_str() )
-  //                            << endl;
-  //         }
-  //         parser->incNthRouting();
-  //       } else {
-  //         cerr << Warning( "LefParser::_layerCbk(): No CRL routing gauge
-  //         defined for \"%s\"."
-  //                        , getString( basicLayer->getName() ).c_str()
-  //                        ) << endl;
-  //       }
-
-  //       parser->incNthMetal();
-  //     }
-  //   }
-
   return 0;
 }
 
 int LefParser::_siteCbk(lefrCallbackType_e c, lefiSite* site, lefiUserData ud) {
   printf("LefParser::_siteCbk\n");
   LefParser* parser = (LefParser*)ud;
-  // AllianceFramework* af     = AllianceFramework::get();
   string siteClass = "";
   if (site->hasClass()) {
     siteClass = site->siteClass();
     boost::to_upper(siteClass);
-    //printf("LefParser::_siteCbk: %s %s %lu %lu\n", site->name(),
-    //       siteClass.c_str(), lefSiteWidth, lefSiteHeight);
-    // if (siteClass == "CORE") {
-    //   // PNLDesignGauge* gauge = parser->getPNLDesignGauge();
-    //   // if (not gauge)
-    //   //   throw Error( "LefParser::_siteCbk(): Default gauge is not defined.
-    //   //   Aborting." );
-
-    //   // PNLBox::Unit  crlSliceStep   = gauge->getSliceStep  ();
-    //   // PNLBox::Unit  crlSliceHeight = gauge->getSliceHeight();
-
-    //   // if (not parser->getCoreSiteX()
-    //   //    or ((parser->getCoreSiteX() != crlSliceStep) and
-    //   //    (parser->getCoreSiteY() != crlSliceHeight)) ) {
-    //   parser->setCoreSite(lefSiteWidth, lefSiteHeight);
-    //   // PNLSite::create( NLName(site->name()), siteClass, lefSiteWidth,
-    //   // lefSiteHeight ); if ( (crlSliceStep == lefSiteWidth) and
-    //   // (crlSliceHeight == lefSiteHeight) ) cerr << "     - Site \"" <<
-    //   // site->name() << "\" of class CORE match the Coriolis PNLDesign gauge."
-    //   // << endl;
-    //   //}
-    // } else if (siteClass == "PAD") {
-    //   string name = string("LEF.") + site->name();
-    //   // PNLDesignGauge* cg   = af->getPNLDesignGauge( name );
-
-    //   // if (cg) {
-    //   //   if ( (cg->getSliceStep() != lefSiteWidth) or (cg->getSliceHeight() !=
-    //   //   lefSiteHeight)) {
-    //   //     cerr << "     - Site \"" << site->name() << "\" of class PAD has
-    //   //     mismatched redefinition OVERWRITING." << endl; cerr << " width: "
-    //   //     << PNLUnit::getValueString(cg->getSliceStep  ()) << " vs. " <<
-    //   //     PNLUnit::getValueString(lefSiteWidth)
-    //   //          <<       " height: " <<
-    //   //          PNLUnit::getValueString(cg->getSliceHeight()) << " vs. " <<
-    //   //          PNLUnit::getValueString(lefSiteHeight)
-    //   //          << endl;
-    //   //   //cg->setPitch      ( lefSiteWidth  );
-    //   //     cg->setSliceStep  ( lefSiteWidth  );
-    //   //     cg->setSliceHeight( lefSiteHeight );
-    //   //   }
-    //   //   cg->setFlags( PNLDesignGauge::Flags::Pad );
-    //   // } else {
-    //   //   cg = PNLDesignGauge::create( name.c_str(), "unknown", lefSiteWidth,
-    //   //   lefSiteHeight, lefSiteWidth ); cg->setFlags(
-    //   //   PNLDesignGauge::Flags::Pad ); af->addPNLDesignGauge( cg );
-    //   // }
-    // }
-    // parser->setCoreSite( lefSiteWidth, lefSiteHeight );
-    // PNLSite::create(NLName(site->name()), siteClass, lefSiteWidth,
-    //                 lefSiteHeight);
-    // printf("     - Site \"%s\" of class %s (%lu,%lu) (%f, %f)\n", site->name(),
-    //        siteClass.c_str(), lefSiteWidth, lefSiteHeight, site->sizeX(),
-    //        site->sizeY());
   }
   PNLBox::Unit lefSiteWidth =
         site->sizeX();  // PNLUnit::fromPhysical( site->sizeX(), PNLUnit::Micro
@@ -1237,356 +1068,13 @@ int LefParser::_pinCbk(lefrCallbackType_e c, lefiPin* pin, lefiUserData ud) {
     net->setGlobal(true);
   if (pin->name()[strlen(pin->name()) - 1] == '!')
     net->setGlobal(true);
-
-  // for ( int iport=0 ; iport < pin->numPorts() ; ++iport ) {
-  //   Layer* layer = NULL;
-
-  //   lefiGeometries* geoms = pin->port( iport );
-  //   for ( int igeom=0 ; igeom < geoms->numItems() ; ++igeom ) {
-  //     if (geoms->itemType(igeom) == lefiGeomLayerE) {
-  //       layer = parser->getLayer( geoms->getLayer(igeom) );
-  //       continue;
-  //     }
-  //     if (geoms->itemType(igeom) == lefiGeomRectE) {
-  //       lefiGeomRect* r          = geoms->getRect(igeom);
-  //       PNLBox::Unit     w          = parser->fromUnitsMicrons(r->xh -
-  //       r->xl); PNLBox::Unit     h          = parser->fromUnitsMicrons(r->yh
-  //       - r->yl); Segment*      segment    = NULL; float         formFactor =
-  //       (float)w / (float)h;
-
-  //       if ( (formFactor > 0.5) and not parser->isVH() ) {
-  //         segment = Horizontal::create( net, layer
-  //                                     , parser->fromUnitsMicrons( (r->yl +
-  //                                     r->yh)/2 ) , h ,
-  //                                     parser->fromUnitsMicrons( r->xl ) ,
-  //                                     parser->fromUnitsMicrons( r->xh )
-  //                                     );
-  //       } else {
-  //         segment = Vertical::create( net, layer
-  //                                   , parser->fromUnitsMicrons( (r->xl +
-  //                                   r->xh)/2 ) , w ,
-  //                                   parser->fromUnitsMicrons( r->yl ) ,
-  //                                   parser->fromUnitsMicrons( r->yh )
-  //                                   );
-  //       }
-  //       if (segment) parser->addPinComponent( pin->name(), segment );
-  //     //cerr << "       | " << segment << endl;
-  //       continue;
-  //     }
-  //     if (geoms->itemType(igeom) == lefiGeomPolygonE) {
-  //       lefiGeomPolygon* polygon = geoms->getPolygon(igeom);
-  //       vector<PNLPoint>    points;
-  //       for ( int ipoint=0 ; ipoint<polygon->numPNLPoints ; ++ipoint ) {
-  //         points.push_back( PNLPoint(
-  //         parser->fromUnitsMicrons(polygon->x[ipoint])
-  //                                ,
-  //                                parser->fromUnitsMicrons(polygon->y[ipoint])
-  //                                ));
-  //       }
-  //       points.push_back( PNLPoint( parser->fromUnitsMicrons(polygon->x[0])
-  //                              , parser->fromUnitsMicrons(polygon->y[0]) ));
-  //       Rectilinear* rectilinear = Rectilinear::create( net, layer, points );
-  //       if (rectilinear) parser->addPinComponent( pin->name(), rectilinear );
-  //       continue;
-  //     }
-  //     if (geoms->itemType(igeom) == lefiGeomClassE) {
-  //     // Ignore CLASS <site>. Deduced from segments positions.
-  //       continue;
-  //     }
-
-  //     string geomTypeName;
-  //     switch ( geoms->itemType(igeom) ) {
-  //       case lefiGeomUnknown:           geomTypeName = "lefiGeomUnknown" ;
-  //       break; case lefiGeomLayerE:            geomTypeName =
-  //       "lefiGeomLayerE"           ; break; case lefiGeomLayerMinSpacingE:
-  //       geomTypeName = "lefiGeomMinSpacingE"      ; break; case
-  //       lefiGeomLayerRuleWidthE:   geomTypeName = "lefiGeomRuleWidthE" ;
-  //       break; case lefiGeomWidthE:            geomTypeName =
-  //       "lefiGeomWidthE"           ; break; case lefiGeomPathE: geomTypeName
-  //       = "lefiGeomPathE"            ; break; case lefiGeomPathIterE:
-  //       geomTypeName = "lefiGeomPathIterE"        ; break; case
-  //       lefiGeomRectE:             geomTypeName = "lefiGeomRectE" ; break;
-  //       case lefiGeomRectIterE:         geomTypeName = "lefiGeomRectIterE" ;
-  //       break; case lefiGeomPolygonE:          geomTypeName =
-  //       "lefiGeomPolygonE"         ; break; case lefiGeomPolygonIterE:
-  //       geomTypeName = "lefiGeomPolygonIterE"     ; break; case lefiGeomViaE:
-  //       geomTypeName = "lefiGeomViaE"             ; break; case
-  //       lefiGeomViaIterE:          geomTypeName = "lefiGeomViaIterE" ; break;
-  //       case lefiGeomClassE:            geomTypeName = "lefiGeomClassE" ;
-  //       break; case lefiGeomLayerExceptPgPNLNetE: geomTypeName =
-  //       "lefiGeomLayerExceptPgPNLNetE"; break; case lefiGeomEnd: geomTypeName
-  //       = "lefiGeomEnd"              ; break;
-  //     }
-
-  //     if (not geomTypeName.empty())
-  //       cerr << Warning( "LefParser::_pinCkb(): In PIN \"%s\", unsupported
-  //       geometry \"%s\"."
-  //                      , pin->name(), geomTypeName.c_str() ) << endl;
-  //   }
-  // }
-
   return 0;
 }
 
 void LefParser::_pinStdPostProcess() {
-  printf("LefParser::_pinStdPostProcess\n");
-  // const Layer*              metal1      = _routingGauge->getLayerGauge(
-  // (size_t)0 )->getLayer(); const RoutingLayerGauge*  gaugeMetal2 =
-  // _routingGauge->getLayerGauge( 1 );
-  //       Box                 ab          = _cell->getAbutmentBox();
-
-  // //cerr << "       @ _pinStdPostProcess" << endl;
-
-  // for ( auto element : _pinComponents ) {
-  //   string              pinName    = element.first;
-  //   vector<PNLTerm*>& components = element.second;
-  //   vector<Segment*>    ongrids;
-  //   bool                isSupply = false;
-
-  //   for ( PNLTerm* component : components ) {
-  //     if (component->getNet()->isSupply()) {
-  //       isSupply = true;
-  //       break;
-  //     }
-
-  //     Segment* segment = dynamic_cast<Segment*>( component );
-  //     if (segment) {
-  //       bool isWide = (segment->getWidth() >= getMinTerminalWidth());
-
-  //       // cerr << "       > " << segment << endl;
-  //       // if (not isVH()) cerr << "X NOT isVH()" << endl;
-  //       // else            cerr << "X isVH()" << endl;
-
-  //       if (isVH() and (segment->getLayer()->getMask() == metal1->getMask()))
-  //       {
-  //       // cerr << "isVH()" << endl;
-  //         Vertical* v = dynamic_cast<Vertical*>( segment );
-  //         if (v) {
-  //           PNLBox::Unit nearestX = gaugeMetal2->getTrackPosition(
-  //           ab.getXMin()
-  //                                                             , ab.getXMax()
-  //                                                             , v->getX()
-  //                                                             ,
-  //                                                             Constant::Nearest
-  //                                                             );
-
-  //           if (nearestX == v->getX()) {
-  //           } else {
-  //             PNLBox::Unit neighbor = nearestX
-  //               + ((nearestX > v->getX()) ? 1 : -1) *
-  //               gaugeMetal2->getPitch();
-
-  //           //cerr << "       | X:" << PNLUnit::getValueString(v->getX())
-  //           //     <<  " nearestX:" << PNLUnit::getValueString(nearestX)
-  //           //     <<  " neighbor:" << PNLUnit::getValueString(neighbor)
-  //           //     << endl;
-
-  //             if (  (v->getX() - v->getHalfWidth() > neighbor)
-  //                or (v->getX() + v->getHalfWidth() < neighbor) ) {
-  //               ongrids.push_back( Vertical::create( v->getNet()
-  //                                                  , v->getLayer()
-  //                                                  , nearestX
-  //                                                  ,
-  //                                                  _routingGauge->getLayerGauge((size_t)0)->getWireWidth()
-  //                                                  , v->getDySource()
-  //                                                  , v->getDyTarget()
-  //                                                  )
-  //                                );
-  //               cerr << "       | " << ongrids[ongrids.size()-1] << endl;
-  //             } else {
-  //             // Unpitched and not wide enough to be under a metal2 track,
-  //             ignore.
-  //             }
-
-  //             continue;
-  //           }
-  //         }
-  //       }
-
-  //       if (isWide) ongrids.push_back( segment );
-  //     }
-  //     Rectilinear* rectilinear = dynamic_cast<Rectilinear*>( component );
-  //     if (rectilinear) {
-  //       cerr << "       > " << rectilinear << endl;
-  //       if (rectilinear->getLayer()->getMask() != metal1->getMask())
-  //         continue;
-
-  //       vector<Box> boxes;
-  //       rectilinear->getAsRectangles( boxes );
-
-  //       if (component->getNet()->isSupply()) {
-  //         ongrids.push_back( Horizontal::create( rectilinear->getNet()
-  //                                              , rectilinear->getLayer()
-  //                                              , boxes.front().getYCenter()
-  //                                              , boxes.front().getHeight()
-  //                                              ,
-  //                                              _cell->getAbutmentBox().getXMin()
-  //                                              ,
-  //                                              _cell->getAbutmentBox().getXMax()
-  //                                              )
-  //                              );
-  //       } else {
-  //         for ( const Box& box : boxes ) {
-  //           PNLBox::Unit nearestX = gaugeMetal2->getTrackPosition(
-  //           ab.getXMin()
-  //                                                             , ab.getXMax()
-  //                                                             ,
-  //                                                             box.getXCenter()
-  //                                                             ,
-  //                                                             Constant::Nearest
-  //                                                             );
-  //           PNLBox::Unit xmin = std::min( box.getXMin(), nearestX -
-  //           gaugeMetal2->getViaWidth()/2 ); PNLBox::Unit xmax = std::max(
-  //           box.getXMax(), nearestX + gaugeMetal2->getViaWidth()/2 );
-  //           ongrids.push_back( Vertical::create( rectilinear->getNet()
-  //                                              , rectilinear->getLayer()
-  //                                              , (xmax+xmin)/2
-  //                                              ,  xmax-xmin
-  //                                              , box.getYMin()
-  //                                              , box.getYMax()
-  //                                              )
-  //                              );
-  //           // PNLBox::Unit neighbor = nearestY
-  //           //   + ((nearestY > box.getYCenter()) ? 1 : -1) *
-  //           gaugeMetal2->getPitch();
-
-  //           // if (  (box.getYMin() > neighbor)
-  //           //    or (box.getYMax() < neighbor) ) {
-  //           //   ongrids.push_back( Vertical::create( rectilinear->getNet()
-  //           //                                      , rectilinear->getLayer()
-  //           //                                      , box.getXCenter()
-  //           //                                      , box.getWidth()
-  //           //                                      , box.getYMin()
-  //           //                                      , box.getYMax()
-  //           //                                      )
-  //           //                    );
-  //           // }
-  //         }
-  //       }
-  //     }
-  //   }
-
-  //   if (ongrids.empty()) {
-  //     if (not isSupply)
-  //       cerr << Warning( "LefParser::_pinStdPostProcess(): Pin \"%s\" has no
-  //       terminal ongrid."
-  //                      , pinName.c_str() ) << endl;
-  //     for ( PNLTerm* component : components ) {
-  //       PNLNetExternalComponents::setExternal( component );
-  //     }
-  //   } else {
-  //     for ( Segment* segment : ongrids ) {
-  //       PNLNetExternalComponents::setExternal( segment );
-  //     }
-  //   }
-  // }
 }
 
 void LefParser::_pinPadPostProcess() {
-  printf("LefParser::_pinPadPostProcess\n");
-  // Box  ab          = getPNLDesign()->getAbutmentBox();
-  // bool isCornerPad = false; //(_cellGauge) and (_cellGauge->getSliceHeight()
-  // == _cellGauge->getSliceStep());
-
-  // for ( auto element : _pinComponents ) {
-  //   string              pinName  = element.first;
-  //   vector<PNLTerm*>& segments = element.second;
-  //   vector<Segment*>    ongrids;
-
-  //   if (segments.empty()) continue;
-
-  //   PNLNet* net = segments[0]->getNet();
-
-  //   for ( size_t i=0 ; i<segments.size() ; ++i ) {
-  //     Box      bb         = segments[i]->getBoundingBox();
-  //     Interval hspan      = Interval( bb.getXMin(), bb.getXMax() );
-  //     Interval vspan      = Interval( bb.getYMin(), bb.getYMax() );
-  //     Segment* capSegment = NULL;
-
-  //     if (segments[i]->getLayer()->isBlockage()) continue;
-
-  //     if (net->isSupply()) {
-  //       if (hspan.contains(ab.getXMin())) {
-  //         capSegment = Horizontal::create( net
-  //                                        , segments[i]->getLayer()
-  //                                        , vspan.getCenter()
-  //                                        , vspan.getSize()
-  //                                        , ab.getXMin()
-  //                                        , hspan.getVMax()
-  //                                        );
-  //       } else if (hspan.contains(ab.getXMax())) {
-  //         capSegment = Horizontal::create( net
-  //                                        , segments[i]->getLayer()
-  //                                        , vspan.getCenter()
-  //                                        , vspan.getSize()
-  //                                        , hspan.getVMin()
-  //                                        , ab.getXMax()
-  //                                        );
-  //       }
-  //     }
-
-  //     if (not capSegment) {
-  //       vector<PNLBox::Unit> distanceToSide;
-  //       distanceToSide.push_back( std::abs(bb.getXMin() - ab.getXMin()) ); //
-  //       West. distanceToSide.push_back( std::abs(ab.getXMax() - bb.getXMax())
-  //       );  // East. distanceToSide.push_back( std::abs(bb.getYMin() -
-  //       ab.getYMin()) );  // South. distanceToSide.push_back(
-  //       std::abs(ab.getYMax() - bb.getYMax()) );  // North.
-
-  //       size_t closestSide = ((isCornerPad) ? 0 : 2);
-  //       for ( size_t i=closestSide ; i < distanceToSide.size() ; ++i ) {
-  //         if (distanceToSide[i] < distanceToSide[closestSide])
-  //           closestSide = i;
-  //       }
-
-  //       switch ( closestSide ) {
-  //         default:
-  //         case 0:  // West.
-  //           capSegment = Horizontal::create( net
-  //                                          , segments[i]->getLayer()
-  //                                          , vspan.getCenter()
-  //                                          , vspan.getSize()
-  //                                          , ab.getXMin()
-  //                                          , hspan.getVMax()
-  //                                          );
-  //           break;
-  //         case 1:  // East.
-  //           capSegment = Horizontal::create( net
-  //                                          , segments[i]->getLayer()
-  //                                          , vspan.getCenter()
-  //                                          , vspan.getSize()
-  //                                          , hspan.getVMin()
-  //                                          , ab.getXMax()
-  //                                          );
-  //           break;
-  //         case 2:  // South.
-  //           capSegment = Vertical::create( net
-  //                                        , segments[i]->getLayer()
-  //                                        , hspan.getCenter()
-  //                                        , hspan.getSize()
-  //                                        , ab.getYMin()
-  //                                        , vspan.getVMax()
-  //                                        );
-  //           break;
-  //         case 3:  // North.
-  //           capSegment = Vertical::create( net
-  //                                        , segments[i]->getLayer()
-  //                                        , hspan.getCenter()
-  //                                        , hspan.getSize()
-  //                                        , vspan.getVMin()
-  //                                        , ab.getYMax()
-  //                                        );
-  //           break;
-  //       }
-  //     }
-
-  //     if (capSegment) {
-  //       PNLNetExternalComponents::setExternal( capSegment );
-  //       segments[i]->destroy();
-  //       segments[i] = NULL;
-  //     }
-  //   }
-  // }
 }
 
 int LefParser::flushErrors() {
@@ -1636,35 +1124,6 @@ NLLibrary* LefParser::parse(string file) {
   parser->createNLLibrary();
   lefrRead(lefStream, file.c_str(), (lefiUserData)parser.get());
   fclose(lefStream);
-
-  // if (not parser->getPNLDesignGauge()) {
-  //   cerr << Warning( "LefParser::parse(): No default Alliance cell gauge,
-  //   unable to check the PNLDesign gauge." ) << endl;
-  // } else if (not parser->getCoreSiteX()) {
-  //   cerr << Warning( "LefParser::parse(): No CORE site found in library,
-  //   unable to check the PNLDesign gauge." ) << endl;
-  // } else {
-  //   if (parser->getCoreSiteY() !=
-  //   parser->getPNLDesignGauge()->getSliceHeight())
-  //     cerr << Warning( "LefParser::parse(): CRL slice height discrepency %s
-  //     while LEF is %s."
-  //                    ,
-  //                    PNLUnit::getValueString(parser->getPNLDesignGauge()->getSliceHeight()).c_str()
-  //                    ,
-  //                    PNLUnit::getValueString(parser->getCoreSiteY()).c_str()
-  //                    ) << endl;
-
-  //   if (parser->getCoreSiteX() !=
-  //   parser->getPNLDesignGauge()->getSliceStep())
-  //     cerr << Warning( "LefParser::parse(): CRL slice step discrepency %s
-  //     while LEF is %s."
-  //                    ,
-  //                    PNLUnit::getValueString(parser->getPNLDesignGauge()->getSliceStep()).c_str()
-  //                    ,
-  //                    PNLUnit::getValueString(parser->getCoreSiteX()).c_str()
-  //                    ) << endl;
-  // }
-
   return parser->getLibrary();
 }
 
@@ -1683,36 +1142,18 @@ NLLibrary* LefImport::load(string fileName) {
   NLLibrary* library = NULL;
   // #if defined(HAVE_LEFDEF)
   library = LefParser::parse(fileName);
-  // #else
-  //      cerr << "[ERROR] CRL::LefImport::load(): \n"
-  //           << "  Coriolis2 hasn't been compiled with LEF/DEF support. To
-  //           enable LEF/DEF\n"
-  //           << "  support, you may obtain parser/driver from Si2
-  //           (www.si2.org) then recompile."
-  //           << endl;
-  //  #endif
-
-  // UpdateSession::close ();
 
   return library;
 }
 
 void LefImport::reset() {
-  // #if defined(HAVE_LEFDEF)
   LefParser::reset();
-  // #endif
 }
 
 void LefImport::setMergeLibrary(NLLibrary* library) {
-  // #if defined(HAVE_LEFDEF)
   LefParser::setMergeLibrary(library);
-  // #endif
 }
 
 void LefImport::setGdsForeignDirectory(string path) {
-  // #if defined(HAVE_LEFDEF)
   LefParser::setGdsForeignDirectory(path);
-  // #endif
 }
-
-//}  // End of CRL namespace.
