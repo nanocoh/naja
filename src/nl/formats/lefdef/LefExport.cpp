@@ -60,23 +60,23 @@ class LefDriver {
   int checkStatus(int status);
 
  private:
-  static int _versionCbk(lefwCallbackType_e, lefiUserData);
-  static int _busBitCharsCbk(lefwCallbackType_e, lefiUserData);
-  static int _clearanceMeasureCbk(lefwCallbackType_e, lefiUserData);
-  static int _dividerCharCbk(lefwCallbackType_e, lefiUserData);
-  static int _unitsCbk(lefwCallbackType_e, lefiUserData);
-  static int _extCbk(lefwCallbackType_e, lefiUserData);
-  static int _propDefCbk(lefwCallbackType_e, lefiUserData);
-  static int _endLibCbk(lefwCallbackType_e, lefiUserData);
-  static int _layerCbk(lefwCallbackType_e, lefiUserData);
-  static int _macroCbk(lefwCallbackType_e, lefiUserData);
-  static int _manufacturingGridCbk(lefwCallbackType_e, lefiUserData);
-  static int _nonDefaultCbk(lefwCallbackType_e, lefiUserData);
-  static int _siteCbk(lefwCallbackType_e, lefiUserData);
-  static int _spacingCbk(lefwCallbackType_e, lefiUserData);
-  static int _useMinSpacingCbk(lefwCallbackType_e, lefiUserData);
-  static int _viaCbk(lefwCallbackType_e, lefiUserData);
-  static int _viaRuleCbk(lefwCallbackType_e, lefiUserData);
+  static int versionCbk_(lefwCallbackType_e, lefiUserData);
+  static int busBitCharsCbk_(lefwCallbackType_e, lefiUserData);
+  static int clearanceMeasureCbk_(lefwCallbackType_e, lefiUserData);
+  static int dividerCharCbk_(lefwCallbackType_e, lefiUserData);
+  static int unitsCbk_(lefwCallbackType_e, lefiUserData);
+  static int extCbk_(lefwCallbackType_e, lefiUserData);
+  static int propDefCbk_(lefwCallbackType_e, lefiUserData);
+  static int endLibCbk_(lefwCallbackType_e, lefiUserData);
+  static int layerCbk_(lefwCallbackType_e, lefiUserData);
+  static int macroCbk_(lefwCallbackType_e, lefiUserData);
+  static int manufacturingGridCbk_(lefwCallbackType_e, lefiUserData);
+  static int nonDefaultCbk_(lefwCallbackType_e, lefiUserData);
+  static int siteCbk_(lefwCallbackType_e, lefiUserData);
+  static int spacingCbk_(lefwCallbackType_e, lefiUserData);
+  static int useMinSpacingCbk_(lefwCallbackType_e, lefiUserData);
+  static int viaCbk_(lefwCallbackType_e, lefiUserData);
+  static int viaRuleCbk_(lefwCallbackType_e, lefiUserData);
   //  int                _driveRoutingLayer    ( RoutingLayerGauge* );
   //  int                _driveCutLayer        ( Layer* );
   int _driveMacro(PNLDesign*);
@@ -136,23 +136,23 @@ LefDriver::LefDriver(const std::vector<PNLDesign*>& cells,
   if (_status != 0)
     return;
 
-  lefwSetVersionCbk(_versionCbk);
-  lefwSetBusBitCharsCbk(_busBitCharsCbk);
-  lefwSetDividerCharCbk(_dividerCharCbk);
-  lefwSetSiteCbk(_siteCbk);
-  lefwSetUnitsCbk(_unitsCbk);
-  lefwSetManufacturingGridCbk(_manufacturingGridCbk);
-  lefwSetClearanceMeasureCbk(_clearanceMeasureCbk);
-  lefwSetExtCbk(_extCbk);
-  lefwSetLayerCbk(_layerCbk);
-  lefwSetMacroCbk(_macroCbk);
-  lefwSetPropDefCbk(_propDefCbk);
-  lefwSetSpacingCbk(_spacingCbk);
-  lefwSetUseMinSpacingCbk(_useMinSpacingCbk);
-  lefwSetNonDefaultCbk(_nonDefaultCbk);
-  lefwSetViaCbk(_viaCbk);
-  lefwSetViaRuleCbk(_viaRuleCbk);
-  lefwSetEndLibCbk(_endLibCbk);
+  lefwSetVersionCbk(versionCbk_);
+  lefwSetBusBitCharsCbk(busBitCharsCbk_);
+  lefwSetDividerCharCbk(dividerCharCbk_);
+  lefwSetSiteCbk(siteCbk_);
+  lefwSetUnitsCbk(unitsCbk_);
+  lefwSetManufacturingGridCbk(manufacturingGridCbk_);
+  lefwSetClearanceMeasureCbk(clearanceMeasureCbk_);
+  lefwSetExtCbk(extCbk_);
+  lefwSetLayerCbk(layerCbk_);
+  lefwSetMacroCbk(macroCbk_);
+  lefwSetPropDefCbk(propDefCbk_);
+  lefwSetSpacingCbk(spacingCbk_);
+  lefwSetUseMinSpacingCbk(useMinSpacingCbk_);
+  lefwSetNonDefaultCbk(nonDefaultCbk_);
+  lefwSetViaCbk(viaCbk_);
+  lefwSetViaRuleCbk(viaRuleCbk_);
+  lefwSetEndLibCbk(endLibCbk_);
 }
 
 LefDriver::~LefDriver() {}
@@ -345,7 +345,7 @@ int LefDriver::_driveMacro(PNLDesign* cell) {
   RETURN_CHECK_STATUS(_status);
 }
 
-int LefDriver::_versionCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::versionCbk_(lefwCallbackType_e, lefiUserData udata) {
   LefDriver* driver = (LefDriver*)udata;
 
   ostringstream comment;
@@ -359,18 +359,18 @@ int LefDriver::_versionCbk(lefwCallbackType_e, lefiUserData udata) {
   return driver->checkStatus(lefwVersion(5, 7));
 }
 
-int LefDriver::_busBitCharsCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::busBitCharsCbk_(lefwCallbackType_e, lefiUserData udata) {
   LefDriver* driver = (LefDriver*)udata;
   lefwNewLine();
   return driver->checkStatus(lefwBusBitChars("()"));
 }
 
-int LefDriver::_dividerCharCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::dividerCharCbk_(lefwCallbackType_e, lefiUserData udata) {
   LefDriver* driver = (LefDriver*)udata;
   return driver->checkStatus(lefwDividerChar("."));
 }
 
-int LefDriver::_unitsCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::unitsCbk_(lefwCallbackType_e, lefiUserData udata) {
   LefDriver* driver = (LefDriver*)udata;
   lefwNewLine();
 
@@ -407,11 +407,11 @@ int LefDriver::_unitsCbk(lefwCallbackType_e, lefiUserData udata) {
   return driver->checkStatus(status);
 }
 
-int LefDriver::_layerCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::layerCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::_siteCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::siteCbk_(lefwCallbackType_e, lefiUserData udata) {
   LefDriver* driver = (LefDriver*)udata;
 
   // Iterate through all sites
@@ -456,24 +456,24 @@ int LefDriver::_siteCbk(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::_extCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::extCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::_propDefCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::propDefCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::_clearanceMeasureCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::clearanceMeasureCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::_endLibCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::endLibCbk_(lefwCallbackType_e, lefiUserData udata) {
   LefDriver* driver = (LefDriver*)udata;
   return driver->checkStatus(lefwEnd());
 }
 
-int LefDriver::_macroCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::macroCbk_(lefwCallbackType_e, lefiUserData udata) {
   LefDriver* driver = (LefDriver*)udata;
 
   const std::vector<PNLDesign*>& cells = driver->getPNLDesigns();
@@ -486,27 +486,27 @@ int LefDriver::_macroCbk(lefwCallbackType_e, lefiUserData udata) {
   return driver->getStatus();
 }
 
-int LefDriver::_manufacturingGridCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::manufacturingGridCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::_nonDefaultCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::nonDefaultCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::_spacingCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::spacingCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::_useMinSpacingCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::useMinSpacingCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::_viaCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::viaCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::_viaRuleCbk(lefwCallbackType_e, lefiUserData udata) {
+int LefDriver::viaRuleCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
@@ -543,7 +543,7 @@ using std::cerr;
 using std::endl;
 using std::string;
 
- void  LefExport::drive ( PNLDesign* cell, unsigned int flags )
+  void  LefExport::drive ( PNLDesign* cell, unsigned int flags )
   {
     string     libraryName = "symbolic";
     std::vector<PNLDesign*> cells;
