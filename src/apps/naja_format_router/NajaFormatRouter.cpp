@@ -151,7 +151,7 @@ int main(int argc, char* argv[]) {
       printf("--term(%s): %s\n", term->getInstance()->getName().getString().c_str(), term->getName().getString().c_str());
     }
   }
-  naja::NL::LefExport::dump(lib, LefExport::WithTechnology);
+  naja::NL::LefDumper::dump(lib);
   DefExport::drive(design, DefExport::WithLEF);
   printf("Done\n");
 }

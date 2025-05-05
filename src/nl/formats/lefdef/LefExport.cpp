@@ -10,8 +10,6 @@
 #include "PNLBox.h"
 #include "PNLDesign.h"
 #include "PNLNet.h"
-#include "lefwWriter.hpp"
-#include "lefwWriterCalls.hpp"
 // for ostringstream
 #include <sstream>
 #include "PNLSite.h"
@@ -20,7 +18,11 @@
 
 using namespace std;
 using namespace naja::NL;
-using namespace naja::NL;
+using naja::NL::NLLibrary;
+using naja::NL::PNLTransform;
+using std::cerr;
+using std::endl;
+using std::string;
 
 struct Comparator {
   bool operator()(PNLDesign* a, PNLDesign* b) const {
@@ -33,84 +35,12 @@ struct Comparator {
     return checkStatus(status);
 #define RETURN_CHECKstatus_(status) return checkStatus(status);
 
-class LefDumper {
- public:
-  static void dump(const std::vector<PNLDesign*>&,
-                    const string& libraryName,
-                    unsigned int flags);
-  static int getUnits();
-  // static double             toLefUnits            ( PNLBox::Unit );
-  static PNLBox::Unit getSliceHeight();
-  static PNLBox::Unit getPitchWidth();
-  ~LefDumper();
-  int write();
-
- private:
-  LefDumper(const std::vector<PNLDesign*>&,
-            const string& libraryName,
-            unsigned int flags,
-            FILE*);
-  inline unsigned int getFlags() const;
-  inline const std::vector<PNLDesign*> getPNLDesigns() const;
-  inline const string& getNLLibraryName() const;
-  // inline AllianceFramework* getFramework          ();
-  inline int getStatus() const;
-  int checkStatus(int status);
-
- private:
-  static int versionCbk_(lefwCallbackType_e, lefiUserData);
-  static int busBitCharsCbk_(lefwCallbackType_e, lefiUserData);
-  static int clearanceMeasureCbk_(lefwCallbackType_e, lefiUserData);
-  static int dividerCharCbk_(lefwCallbackType_e, lefiUserData);
-  static int unitsCbk_(lefwCallbackType_e, lefiUserData);
-  static int extCbk_(lefwCallbackType_e, lefiUserData);
-  static int propDefCbk_(lefwCallbackType_e, lefiUserData);
-  static int endLibCbk_(lefwCallbackType_e, lefiUserData);
-  static int layerCbk_(lefwCallbackType_e, lefiUserData);
-  static int macroCbk_(lefwCallbackType_e, lefiUserData);
-  static int manufacturingGridCbk_(lefwCallbackType_e, lefiUserData);
-  static int nonDefaultCbk_(lefwCallbackType_e, lefiUserData);
-  static int siteCbk_(lefwCallbackType_e, lefiUserData);
-  static int spacingCbk_(lefwCallbackType_e, lefiUserData);
-  static int useMinSpacingCbk_(lefwCallbackType_e, lefiUserData);
-  static int viaCbk_(lefwCallbackType_e, lefiUserData);
-  static int viaRuleCbk_(lefwCallbackType_e, lefiUserData);
-  //  int                _dumpRoutingLayer    ( RoutingLayerGauge* );
-  //  int                _dumpCutLayer        ( Layer* );
-  int dumpMacro_(PNLDesign*);
-
- private:
-  // static AllianceFramework* _framework;
-  static int units_;
-  static PNLBox::Unit sliceHeight_;
-  static PNLBox::Unit pitchWidth_;
-  unsigned int flags_;
-  const std::vector<PNLDesign*> cells_;
-  string libraryName_;
-  FILE* lefStream_;
-  int status_;
-};
-
 int LefDumper::units_ = 100;
-// AllianceFramework* LefDumper::_framework   = NULL;
-PNLBox::Unit LefDumper::sliceHeight_ = 0;
-PNLBox::Unit LefDumper::pitchWidth_ = 0;
 
 int LefDumper::getUnits() {
   return units_;
 }
-// double             LefDumper::toLefUnits     ( PNLBox::Unit u ) { return
-// u;/*PNLUnit::toMicrons(u)*//**getUnits()*/; }
-PNLBox::Unit LefDumper::getSliceHeight() {
-  return sliceHeight_;
-}
-PNLBox::Unit LefDumper::getPitchWidth() {
-  return pitchWidth_;
-};
-// inline AllianceFramework* LefDumper::getFramework   () { return _framework; }
-inline unsigned int LefDumper::getFlags() const {
-  return flags_;
-}
+
 inline const std::vector<PNLDesign*> LefDumper::getPNLDesigns() const {
   return cells_;
 }
@@ -123,17 +53,14 @@ inline const string& LefDumper::getNLLibraryName() const {
 
 LefDumper::LefDumper(const std::vector<PNLDesign*>& cells,
                      const string& libraryName,
-                     unsigned int flags,
                      FILE* lefStream)
-    : flags_(flags),
-      cells_(cells),
+    : cells_(cells),
       libraryName_(libraryName),
       lefStream_(lefStream),
       status_(0) {
   status_ = lefwInitCbk(lefStream_);
   if (status_ != 0)
     return;
-
   lefwSetVersionCbk(versionCbk_);
   lefwSetBusBitCharsCbk(busBitCharsCbk_);
   lefwSetDividerCharCbk(dividerCharCbk_);
@@ -163,8 +90,6 @@ int LefDumper::checkStatus(int status) {
   if ((status_ = status) != 0) {
     lefwPrintError(status_);
     assert(false);
-    // cerr << Error("LefDumper::dump(): Error occured while driving
-    // <%s>.",libraryName_.c_str()) << endl;
   }
   return status_;
 }
@@ -410,9 +335,7 @@ int LefDumper::layerCbk_(lefwCallbackType_e, lefiUserData udata) {
 int LefDumper::siteCbk_(lefwCallbackType_e, lefiUserData udata) {
   LefDumper* dumpr = (LefDumper*)udata;
 
-  // Iterate through all sites
   for (PNLSite* site : PNLTechnology::getOrCreate()->getSites()) {
-    // Debugging site details
     // Call lefwSite
     std::string symmetry = "";
     switch (site->getSymmetry()) {
@@ -506,8 +429,7 @@ int LefDumper::viaRuleCbk_(lefwCallbackType_e, lefiUserData udata) {
 }
 
 void LefDumper::dump(const std::vector<PNLDesign*>& cells,
-                      const string& libraryName,
-                      unsigned int flags) {
+                     const string& libraryName) {
   FILE* lefStream = NULL;
   try {
     string path = "./" + libraryName + ".lef";
@@ -518,8 +440,7 @@ void LefDumper::dump(const std::vector<PNLDesign*>& cells,
       assert(false);
     }
 
-    unique_ptr<LefDumper> dumpr(
-        new LefDumper(cells, libraryName, flags, lefStream));
+    unique_ptr<LefDumper> dumpr(new LefDumper(cells, libraryName, lefStream));
     dumpr->write();
   } catch (...) {
     if (lefStream != NULL)
@@ -530,13 +451,7 @@ void LefDumper::dump(const std::vector<PNLDesign*>& cells,
   fclose(lefStream);
 }
 
-using naja::NL::NLLibrary;
-using naja::NL::PNLTransform;
-using std::cerr;
-using std::endl;
-using std::string;
-
-void LefExport::dump(NLLibrary* library, unsigned int flags) {
+void LefDumper::dump(NLLibrary* library) {
   string libraryName = "symbolic";
   std::vector<PNLDesign*> cells;
 
@@ -544,10 +459,10 @@ void LefExport::dump(NLLibrary* library, unsigned int flags) {
     libraryName = library->getName().getString();
 
     for (PNLDesign* icell : library->getPNLDesigns()) {
-      if ( std::find(cells.begin(), cells.end(), icell) == cells.end() ) {
+      if (std::find(cells.begin(), cells.end(), icell) == cells.end()) {
         cells.push_back(icell);
       }
     }
   }
-  LefDumper::dump(cells, libraryName, flags);
+  LefDumper::dump(cells, libraryName);
 }
