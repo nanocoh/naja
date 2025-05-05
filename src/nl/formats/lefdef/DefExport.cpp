@@ -1019,8 +1019,6 @@ namespace {
   void  DefExport::drive ( PNLDesign* PNLDesign, uint32_t flags )
   {
     DefDriver::drive ( PNLDesign, flags );
-
-    if ( flags & WithLEF ) LefExport::drive ( PNLDesign, LefExport::WithTechnology|LefExport::WithSpacers );
   }
 
 

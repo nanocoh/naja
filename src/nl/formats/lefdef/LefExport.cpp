@@ -3,15 +3,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "LefExport.h"
 #include <memory>
+#include <set>
+#include "NLLibrary.h"
+#include "PNLBox.h"
+#include "PNLDesign.h"
+#include "PNLNet.h"
 #include "lefwWriter.hpp"
 #include "lefwWriterCalls.hpp"
-#include "PNLNet.h"
-#include "NLLibrary.h"
-#include "PNLDesign.h"
-#include <set>
-#include "LefExport.h"
-#include "PNLBox.h"
 // for ostringstream
 #include <sstream>
 #include "PNLSite.h"
@@ -22,33 +22,31 @@ using namespace std;
 using namespace naja::NL;
 using namespace naja::NL;
 
-namespace {
-
 struct Comparator {
   bool operator()(PNLDesign* a, PNLDesign* b) const {
     return a->getID() > b->getID();
   }
 };
 
-#define CHECK_STATUS(status) \
+#define CHECKstatus_(status) \
   if ((status) != 0)         \
     return checkStatus(status);
-#define RETURN_CHECK_STATUS(status) return checkStatus(status);
+#define RETURN_CHECKstatus_(status) return checkStatus(status);
 
-class LefDriver {
+class LefDumper {
  public:
-  static void drive(const std::vector<PNLDesign*>&,
+  static void dump(const std::vector<PNLDesign*>&,
                     const string& libraryName,
                     unsigned int flags);
   static int getUnits();
   // static double             toLefUnits            ( PNLBox::Unit );
   static PNLBox::Unit getSliceHeight();
   static PNLBox::Unit getPitchWidth();
-  ~LefDriver();
+  ~LefDumper();
   int write();
 
  private:
-  LefDriver(const std::vector<PNLDesign*>&,
+  LefDumper(const std::vector<PNLDesign*>&,
             const string& libraryName,
             unsigned int flags,
             FILE*);
@@ -77,63 +75,63 @@ class LefDriver {
   static int useMinSpacingCbk_(lefwCallbackType_e, lefiUserData);
   static int viaCbk_(lefwCallbackType_e, lefiUserData);
   static int viaRuleCbk_(lefwCallbackType_e, lefiUserData);
-  //  int                _driveRoutingLayer    ( RoutingLayerGauge* );
-  //  int                _driveCutLayer        ( Layer* );
-  int _driveMacro(PNLDesign*);
+  //  int                _dumpRoutingLayer    ( RoutingLayerGauge* );
+  //  int                _dumpCutLayer        ( Layer* );
+  int dumpMacro_(PNLDesign*);
 
  private:
   // static AllianceFramework* _framework;
-  static int _units;
-  static PNLBox::Unit _sliceHeight;
-  static PNLBox::Unit _pitchWidth;
-  unsigned int _flags;
-  const std::vector<PNLDesign*> _cells;
-  string _libraryName;
-  FILE* _lefStream;
-  int _status;
+  static int units_;
+  static PNLBox::Unit sliceHeight_;
+  static PNLBox::Unit pitchWidth_;
+  unsigned int flags_;
+  const std::vector<PNLDesign*> cells_;
+  string libraryName_;
+  FILE* lefStream_;
+  int status_;
 };
 
-int LefDriver::_units = 100;
-// AllianceFramework* LefDriver::_framework   = NULL;
-PNLBox::Unit LefDriver::_sliceHeight = 0;
-PNLBox::Unit LefDriver::_pitchWidth = 0;
+int LefDumper::units_ = 100;
+// AllianceFramework* LefDumper::_framework   = NULL;
+PNLBox::Unit LefDumper::sliceHeight_ = 0;
+PNLBox::Unit LefDumper::pitchWidth_ = 0;
 
-int LefDriver::getUnits() {
-  return _units;
+int LefDumper::getUnits() {
+  return units_;
 }
-// double             LefDriver::toLefUnits     ( PNLBox::Unit u ) { return
+// double             LefDumper::toLefUnits     ( PNLBox::Unit u ) { return
 // u;/*PNLUnit::toMicrons(u)*//**getUnits()*/; }
-PNLBox::Unit LefDriver::getSliceHeight() {
-  return _sliceHeight;
+PNLBox::Unit LefDumper::getSliceHeight() {
+  return sliceHeight_;
 }
-PNLBox::Unit LefDriver::getPitchWidth() {
-  return _pitchWidth;
+PNLBox::Unit LefDumper::getPitchWidth() {
+  return pitchWidth_;
 };
-// inline AllianceFramework* LefDriver::getFramework   () { return _framework; }
-inline unsigned int LefDriver::getFlags() const {
-  return _flags;
+// inline AllianceFramework* LefDumper::getFramework   () { return _framework; }
+inline unsigned int LefDumper::getFlags() const {
+  return flags_;
 }
-inline const std::vector<PNLDesign*> LefDriver::getPNLDesigns() const {
-  return _cells;
+inline const std::vector<PNLDesign*> LefDumper::getPNLDesigns() const {
+  return cells_;
 }
-inline int LefDriver::getStatus() const {
-  return _status;
+inline int LefDumper::getStatus() const {
+  return status_;
 }
-inline const string& LefDriver::getNLLibraryName() const {
-  return _libraryName;
+inline const string& LefDumper::getNLLibraryName() const {
+  return libraryName_;
 }
 
-LefDriver::LefDriver(const std::vector<PNLDesign*>& cells,
+LefDumper::LefDumper(const std::vector<PNLDesign*>& cells,
                      const string& libraryName,
                      unsigned int flags,
                      FILE* lefStream)
-    : _flags(flags),
-      _cells(cells),
-      _libraryName(libraryName),
-      _lefStream(lefStream),
-      _status(0) {
-  _status = lefwInitCbk(_lefStream);
-  if (_status != 0)
+    : flags_(flags),
+      cells_(cells),
+      libraryName_(libraryName),
+      lefStream_(lefStream),
+      status_(0) {
+  status_ = lefwInitCbk(lefStream_);
+  if (status_ != 0)
     return;
 
   lefwSetVersionCbk(versionCbk_);
@@ -155,27 +153,25 @@ LefDriver::LefDriver(const std::vector<PNLDesign*>& cells,
   lefwSetEndLibCbk(endLibCbk_);
 }
 
-LefDriver::~LefDriver() {}
+LefDumper::~LefDumper() {}
 
-int LefDriver::write() {
-  return checkStatus(lefwWrite(_lefStream, _libraryName.c_str(), (void*)this));
+int LefDumper::write() {
+  return checkStatus(lefwWrite(lefStream_, libraryName_.c_str(), (void*)this));
 }
 
-int LefDriver::checkStatus(int status) {
-  if ((_status = status) != 0) {
-    lefwPrintError(_status);
+int LefDumper::checkStatus(int status) {
+  if ((status_ = status) != 0) {
+    lefwPrintError(status_);
     assert(false);
-    // cerr << Error("LefDriver::drive(): Error occured while driving
-    // <%s>.",_libraryName.c_str()) << endl;
+    // cerr << Error("LefDumper::dump(): Error occured while driving
+    // <%s>.",libraryName_.c_str()) << endl;
   }
-  return _status;
+  return status_;
 }
 
-int LefDriver::_driveMacro(PNLDesign* cell) {
-  printf("LefDriver::_driveMacro\n");
-  _status = lefwStartMacro(cell->getName().getString().c_str());
-  CHECK_STATUS(_status);
-  printf("a\n");
+int LefDumper::dumpMacro_(PNLDesign* cell) {
+  status_ = lefwStartMacro(cell->getName().getString().c_str());
+  CHECKstatus_(status_);
   const PNLBox& abutmentBox(cell->getAbutmentBox());
   const char* macroClass = NULL;
   const char* macroSubClass = NULL;
@@ -282,22 +278,22 @@ int LefDriver::_driveMacro(PNLDesign* cell) {
     default:
       assert(false);
   }
-  _status = lefwMacroClass(macroClass, macroSubClass);
-  CHECK_STATUS(_status);
+  status_ = lefwMacroClass(macroClass, macroSubClass);
+  CHECKstatus_(status_);
   double originX = abutmentBox.getLeft();
   double originY = abutmentBox.getBottom();
-  _status = lefwMacroOrigin(0.0, 0.0);
-  CHECK_STATUS(_status);
+  status_ = lefwMacroOrigin(0.0, 0.0);
+  CHECKstatus_(status_);
   double sizeX = abutmentBox.getWidth();
   double sizeY = abutmentBox.getHeight();
-  _status = lefwMacroSize(sizeX, sizeY);
-  CHECK_STATUS(_status);
-  _status = lefwMacroSymmetry("X Y");
-  CHECK_STATUS(_status);
+  status_ = lefwMacroSize(sizeX, sizeY);
+  CHECKstatus_(status_);
+  status_ = lefwMacroSymmetry("X Y");
+  CHECKstatus_(status_);
   if (cell->getSite() != NULL) {
-    _status = lefwMacroSite(cell->getSite()->getName().getString().c_str());
+    status_ = lefwMacroSite(cell->getSite()->getName().getString().c_str());
   }
-  CHECK_STATUS(_status);
+  CHECKstatus_(status_);
 
   PNLNet* blockagePNLNet = NULL;
 
@@ -310,15 +306,15 @@ int LefDriver::_driveMacro(PNLDesign* cell) {
     if (not net->isExternal())
       continue;
 
-    _status = lefwStartMacroPin(net->getName().getString().c_str());
-    CHECK_STATUS(_status);
+    status_ = lefwStartMacroPin(net->getName().getString().c_str());
+    CHECKstatus_(status_);
 
-    _status = lefwMacroPinDirection("INPUT");
-    CHECK_STATUS(_status);
+    status_ = lefwMacroPinDirection("INPUT");
+    CHECKstatus_(status_);
 
     if (net->isSupply()) {
-      _status = lefwMacroPinShape("ABUTMENT");
-      CHECK_STATUS(_status);
+      status_ = lefwMacroPinShape("ABUTMENT");
+      CHECKstatus_(status_);
     }
 
     const char* pinUse = "SIGNAL";
@@ -328,55 +324,55 @@ int LefDriver::_driveMacro(PNLDesign* cell) {
       pinUse = "POWER";
     else if (net->isClock())
       pinUse = "CLOCK";
-    _status = lefwMacroPinUse(pinUse);
-    CHECK_STATUS(_status);
+    status_ = lefwMacroPinUse(pinUse);
+    CHECKstatus_(status_);
 
-    _status = lefwStartMacroPinPort(NULL);
-    CHECK_STATUS(_status);
+    status_ = lefwStartMacroPinPort(NULL);
+    CHECKstatus_(status_);
 
-    _status = lefwEndMacroPinPort();
-    CHECK_STATUS(_status);
+    status_ = lefwEndMacroPinPort();
+    CHECKstatus_(status_);
 
-    _status = lefwEndMacroPin(net->getName().getString().c_str());
-    CHECK_STATUS(_status);
+    status_ = lefwEndMacroPin(net->getName().getString().c_str());
+    CHECKstatus_(status_);
   }
 
-  _status = lefwEndMacro(cell->getName().getString().c_str());
-  RETURN_CHECK_STATUS(_status);
+  status_ = lefwEndMacro(cell->getName().getString().c_str());
+  RETURN_CHECKstatus_(status_);
 }
 
-int LefDriver::versionCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDriver* driver = (LefDriver*)udata;
+int LefDumper::versionCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LefDumper* dumpr = (LefDumper*)udata;
 
   ostringstream comment;
-  comment << "For design <" << driver->getNLLibraryName() << ">.";
+  comment << "For design <" << dumpr->getNLLibraryName() << ">.";
 
   lefwNewLine();
   lefwAddComment("LEF generated by najaeda.");
   lefwAddComment(comment.str().c_str());
   lefwNewLine();
 
-  return driver->checkStatus(lefwVersion(5, 7));
+  return dumpr->checkStatus(lefwVersion(5, 7));
 }
 
-int LefDriver::busBitCharsCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDriver* driver = (LefDriver*)udata;
+int LefDumper::busBitCharsCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LefDumper* dumpr = (LefDumper*)udata;
   lefwNewLine();
-  return driver->checkStatus(lefwBusBitChars("()"));
+  return dumpr->checkStatus(lefwBusBitChars("()"));
 }
 
-int LefDriver::dividerCharCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDriver* driver = (LefDriver*)udata;
-  return driver->checkStatus(lefwDividerChar("."));
+int LefDumper::dividerCharCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LefDumper* dumpr = (LefDumper*)udata;
+  return dumpr->checkStatus(lefwDividerChar("."));
 }
 
-int LefDriver::unitsCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDriver* driver = (LefDriver*)udata;
+int LefDumper::unitsCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LefDumper* dumpr = (LefDumper*)udata;
   lefwNewLine();
 
   int status = lefwStartUnits();
   if (status != 0)
-    return driver->checkStatus(status);
+    return dumpr->checkStatus(status);
 
   status = lefwUnits(0  // time.
                      ,
@@ -390,29 +386,29 @@ int LefDriver::unitsCbk_(lefwCallbackType_e, lefiUserData udata) {
                      ,
                      0  // voltage.
                      ,
-                     LefDriver::getUnits()  // database.
+                     LefDumper::getUnits()  // database.
   );
   if (status != 0)
-    return driver->checkStatus(status);
+    return dumpr->checkStatus(status);
 
   status = lefwEndUnits();
 
   status = lefwManufacturingGrid(
       PNLTechnology::getOrCreate()
-          ->getManufacturingGrid() /*LefDriver::toLefUnits(PNLUnit::fromGrid(1.0))*/);
+          ->getManufacturingGrid() /*LefDumper::toLefUnits(PNLUnit::fromGrid(1.0))*/);
 
   if (status != 0)
-    return driver->checkStatus(status);
+    return dumpr->checkStatus(status);
 
-  return driver->checkStatus(status);
+  return dumpr->checkStatus(status);
 }
 
-int LefDriver::layerCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LefDumper::layerCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::siteCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDriver* driver = (LefDriver*)udata;
+int LefDumper::siteCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LefDumper* dumpr = (LefDumper*)udata;
 
   // Iterate through all sites
   for (PNLSite* site : PNLTechnology::getOrCreate()->getSites()) {
@@ -442,13 +438,13 @@ int LefDriver::siteCbk_(lefwCallbackType_e, lefiUserData udata) {
 
     // Handle errors
     if (status != 0) {
-      return driver->checkStatus(status);  // Handle error status
+      return dumpr->checkStatus(status);  // Handle error status
     }
 
     // End each site to ensure proper state reset
     status = lefwEndSite(site->getName().getString().c_str());
     if (status != 0) {
-      return driver->checkStatus(status);
+      return dumpr->checkStatus(status);
     }
   }
 
@@ -456,61 +452,60 @@ int LefDriver::siteCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::extCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LefDumper::extCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::propDefCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LefDumper::propDefCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::clearanceMeasureCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LefDumper::clearanceMeasureCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::endLibCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDriver* driver = (LefDriver*)udata;
-  return driver->checkStatus(lefwEnd());
+int LefDumper::endLibCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LefDumper* dumpr = (LefDumper*)udata;
+  return dumpr->checkStatus(lefwEnd());
 }
 
-int LefDriver::macroCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDriver* driver = (LefDriver*)udata;
+int LefDumper::macroCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LefDumper* dumpr = (LefDumper*)udata;
 
-  const std::vector<PNLDesign*>& cells = driver->getPNLDesigns();
+  const std::vector<PNLDesign*>& cells = dumpr->getPNLDesigns();
   std::vector<PNLDesign*>::const_iterator icell = cells.begin();
-  for (; (icell != cells.end()) and (driver->getStatus() == 0); ++icell) {
-    printf("LE: %s\n", (*icell)->getName().getString().c_str());
-    driver->_driveMacro(*icell);
+  for (; (icell != cells.end()) and (dumpr->getStatus() == 0); ++icell) {
+    dumpr->dumpMacro_(*icell);
   }
 
-  return driver->getStatus();
+  return dumpr->getStatus();
 }
 
-int LefDriver::manufacturingGridCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LefDumper::manufacturingGridCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::nonDefaultCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LefDumper::nonDefaultCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::spacingCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LefDumper::spacingCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::useMinSpacingCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LefDumper::useMinSpacingCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::viaCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LefDumper::viaCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDriver::viaRuleCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LefDumper::viaRuleCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-void LefDriver::drive(const std::vector<PNLDesign*>& cells,
+void LefDumper::dump(const std::vector<PNLDesign*>& cells,
                       const string& libraryName,
                       unsigned int flags) {
   FILE* lefStream = NULL;
@@ -519,13 +514,13 @@ void LefDriver::drive(const std::vector<PNLDesign*>& cells,
 
     lefStream = fopen(path.c_str(), "w");
     if (lefStream == NULL) {
-      // throw Error("LefDriver::drive(): Cannot open <%s>.",path.c_str());
+      // throw Error("LefDumper::dump(): Cannot open <%s>.",path.c_str());
       assert(false);
     }
 
-    unique_ptr<LefDriver> driver(
-        new LefDriver(cells, libraryName, flags, lefStream));
-    driver->write();
+    unique_ptr<LefDumper> dumpr(
+        new LefDumper(cells, libraryName, flags, lefStream));
+    dumpr->write();
   } catch (...) {
     if (lefStream != NULL)
       fclose(lefStream);
@@ -535,41 +530,13 @@ void LefDriver::drive(const std::vector<PNLDesign*>& cells,
   fclose(lefStream);
 }
 
-}  // End of anonymous namespace.
-
 using naja::NL::NLLibrary;
 using naja::NL::PNLTransform;
 using std::cerr;
 using std::endl;
 using std::string;
 
-  void  LefExport::drive ( PNLDesign* cell, unsigned int flags )
-  {
-    string     libraryName = "symbolic";
-    std::vector<PNLDesign*> cells;
-
-    if ( cell != NULL ) {
-      libraryName = cell->getName().getString() + "_export";
-
-      // for ( Occurrence occurrence : cell->getTerminalNetlistInstanceOccurrences() ) {
-      //   Instance*   instance = static_cast<Instance*>(occurrence.getEntity());
-      //   cells.insert ( instance->getMasterPNLDesign() );
-      //}
-    }
-
-    /*if ( flags & WithSpacers ) {
-    // Ugly. Direct uses of Alliance Framework.
-      PNLDesign* spacer = AllianceFramework::get()->getPNLDesign("tie_x0",Catalog::State::Views);
-      if ( spacer != NULL ) cells.insert ( spacer );
-
-      spacer = AllianceFramework::get()->getPNLDesign("rowend_x0",Catalog::State::Views);
-      if ( spacer != NULL ) cells.insert ( spacer );
-    }*/
-
-    LefDriver::drive ( cells, libraryName, flags );
-  }
-
-void LefExport::drive(NLLibrary* library, unsigned int flags) {
+void LefExport::dump(NLLibrary* library, unsigned int flags) {
   string libraryName = "symbolic";
   std::vector<PNLDesign*> cells;
 
@@ -577,10 +544,10 @@ void LefExport::drive(NLLibrary* library, unsigned int flags) {
     libraryName = library->getName().getString();
 
     for (PNLDesign* icell : library->getPNLDesigns()) {
-      // if ( cells.find(icell) == cells.end())
-      printf("LE cell name: %s\n", icell->getName().getString().c_str());
-      cells.push_back(icell);
+      if ( std::find(cells.begin(), cells.end(), icell) == cells.end() ) {
+        cells.push_back(icell);
+      }
     }
   }
-  LefDriver::drive(cells, libraryName, flags);
+  LefDumper::dump(cells, libraryName, flags);
 }
