@@ -1,24 +1,124 @@
-// SPDX-FileCopyrightText: 2025 The Naja authors <https://github.com/najaeda/naja/blob/main/AUTHORS>
+// SPDX-FileCopyrightText: 2025 The Naja authors
+// <https://github.com/najaeda/naja/blob/main/AUTHORS>
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef CRL_LEF_IMPORT_H
-#define CRL_LEF_IMPORT_H
+#pragma once
 
 #include <string>
+#include "NLDB.h"
+#include "PNLBox.h"
+#include "lefrReader.hpp"
+
+using namespace std;
 
 namespace naja {
-namespace SNL {
-class SNLLibrary;
-}
-}  // namespace naja // namespace SNL
+namespace NL {
+class NLLibrary;
+class PNLDesign;
+class PNLNet;
+class PNLTerm;
+class PNLPoint;
 
-class LefImport {
+class LEFConstructor {
  public:
+  static void setMergeLibrary(NLLibrary*);
+  static void setGdsForeignDirectory(string);
   static void reset();
+  static NLLibrary* parse(string file);
+  LEFConstructor(string file, string libraryName);
+  ~LEFConstructor();
+  inline bool isVH() const;
+  bool isUnmatchedLayer(string);
+  NLLibrary* createNLLibrary();
+  PNLDesign* earlyGetPNLDesign(bool& created, string name = "");
+  PNLNet* earlygetNet(string name);
+  PNLTerm* earlygetTerm(string name);
+  inline string getLibraryName() const;
+  inline NLLibrary* getLibrary(bool create = false);
+  inline string getForeignPath() const;
+  inline void setForeignPath(string);
+  inline const PNLPoint& getForeignPosition() const;
+  inline void setForeignPosition(const PNLPoint&);
+  inline PNLNet* getGdsPower() const;
+  inline void setGdsPower(PNLNet*);
+  inline PNLNet* getGdsGround() const;
+  inline void setGdsGround(PNLNet*);
+  inline PNLDesign* getPNLDesign() const;
+  inline void setPNLDesign(PNLDesign*);
+  inline PNLNet* getNet() const;
+  inline void setPNLNet(PNLNet*);
+  static void setCoreSite(PNLBox::Unit x, PNLBox::Unit y);
+  static PNLBox::Unit getCoreSiteX();
+  static PNLBox::Unit getCoreSiteY();
+  inline PNLBox::Unit getMinTerminalWidth() const;
+  inline double getUnitsMicrons() const;
+  inline void setUnitsMicrons(double);
+  inline bool hasErrors() const;
+  inline const vector<string>& getErrors() const;
+  inline void pushError(const string&);
+  int flushErrors();
+  inline void clearErrors();
+  inline int getNthMetal() const;
+  inline void incNthMetal();
+  inline int getNthCut() const;
+  inline void incNthCut();
+  inline int getNthRouting() const;
+  inline void incNthRouting();
+  inline void addPinComponent(string name, PNLTerm*);
+  inline void clearPinComponents();
+  naja::NL::NLDB* getDB() { return db_; }
   static naja::NL::NLLibrary* load(std::string fileName);
-  static void setMergeLibrary(naja::NL::NLLibrary*);
-  static void setGdsForeignDirectory(std::string path);
+
+ private:
+  static int unitsCbk_(lefrCallbackType_e, lefiUnits*, lefiUserData);
+  static int layerCbk_(lefrCallbackType_e, lefiLayer*, lefiUserData);
+  static int siteCbk_(lefrCallbackType_e, lefiSite*, lefiUserData);
+  static int obstructionCbk_(lefrCallbackType_e,
+                             lefiObstruction*,
+                             lefiUserData);
+  static int macroCbk_(lefrCallbackType_e, lefiMacro*, lefiUserData);
+  static int macroSiteCbk_(lefrCallbackType_e,
+                           const lefiMacroSite*,
+                           lefiUserData);
+  static int macroForeignCbk_(lefrCallbackType_e,
+                              const lefiMacroForeign*,
+                              lefiUserData);
+  static int pinCbk_(lefrCallbackType_e, lefiPin*, lefiUserData);
+  void pinStdPostProcess_();
+  void pinPadPostProcess_();
+  static int viaCbk_(lefrCallbackType_e type, lefiVia* via, lefiUserData);
+  static int manufacturingCB_(lefrCallbackType_e /* unused: c */,
+                              double num,
+                              lefiUserData ud);
+  static void logFunction_(const char* message);
+
+ private:
+  naja::NL::NLDB* db_ = nullptr;
+  static string gdsForeignDirectory_;
+  static NLLibrary* mergeNLLibrary_;
+  string file_;
+  string libraryName_;
+  NLLibrary* library_;
+  string foreignPath_;
+  PNLPoint foreignPosition_;
+  PNLNet* gdsPower_;
+  PNLNet* gdsGround_;
+  PNLDesign* cell_;
+  PNLNet* net_;
+  string busBits_;
+  double unitsMicrons_;
+  PNLBox::Unit oneGrid_;
+  map<string, vector<PNLTerm*> > pinComponents_;
+  vector<string> unmatchedLayers_;
+  vector<string> errors_;
+  int nthMetal_;
+  int nthCut_;
+  int nthRouting_;
+  PNLBox::Unit minTerminalWidth_;
+  static PNLBox::Unit coreSiteX_;
+  static PNLBox::Unit coreSiteY_;
 };
 
-#endif  // CRL_DEF_IMPORT_H
+}  // namespace NL
+}  // namespace naja

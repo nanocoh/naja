@@ -21,18 +21,18 @@ namespace NL {
 
 class NLLibrary;
 
-class LefDumper {
+class LEFDumper {
  public:
   static void dump(const std::vector<PNLDesign*>&, const string& libraryName);
   static int getUnits();
   static PNLBox::Unit getSliceHeight();
   static PNLBox::Unit getPitchWidth();
-  ~LefDumper();
+  ~LEFDumper();
   int write();
   static void dump(naja::NL::NLLibrary* library);
 
  private:
-  LefDumper(const std::vector<PNLDesign*>&, const string& libraryName, FILE*);
+  LEFDumper(const std::vector<PNLDesign*>&, const string& libraryName, FILE*);
   inline const std::vector<PNLDesign*> getPNLDesigns() const;
   inline const string& getNLLibraryName() const;
   inline int getStatus() const;

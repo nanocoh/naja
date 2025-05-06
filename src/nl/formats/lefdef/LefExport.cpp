@@ -35,23 +35,23 @@ struct Comparator {
     return checkStatus(status);
 #define RETURN_CHECKstatus_(status) return checkStatus(status);
 
-int LefDumper::units_ = 100;
+int LEFDumper::units_ = 100;
 
-int LefDumper::getUnits() {
+int LEFDumper::getUnits() {
   return units_;
 }
 
-inline const std::vector<PNLDesign*> LefDumper::getPNLDesigns() const {
+inline const std::vector<PNLDesign*> LEFDumper::getPNLDesigns() const {
   return cells_;
 }
-inline int LefDumper::getStatus() const {
+inline int LEFDumper::getStatus() const {
   return status_;
 }
-inline const string& LefDumper::getNLLibraryName() const {
+inline const string& LEFDumper::getNLLibraryName() const {
   return libraryName_;
 }
 
-LefDumper::LefDumper(const std::vector<PNLDesign*>& cells,
+LEFDumper::LEFDumper(const std::vector<PNLDesign*>& cells,
                      const string& libraryName,
                      FILE* lefStream)
     : cells_(cells),
@@ -80,13 +80,13 @@ LefDumper::LefDumper(const std::vector<PNLDesign*>& cells,
   lefwSetEndLibCbk(endLibCbk_);
 }
 
-LefDumper::~LefDumper() {}
+LEFDumper::~LEFDumper() {}
 
-int LefDumper::write() {
+int LEFDumper::write() {
   return checkStatus(lefwWrite(lefStream_, libraryName_.c_str(), (void*)this));
 }
 
-int LefDumper::checkStatus(int status) {
+int LEFDumper::checkStatus(int status) {
   if ((status_ = status) != 0) {
     lefwPrintError(status_);
     assert(false);
@@ -94,7 +94,7 @@ int LefDumper::checkStatus(int status) {
   return status_;
 }
 
-int LefDumper::dumpMacro_(PNLDesign* cell) {
+int LEFDumper::dumpMacro_(PNLDesign* cell) {
   status_ = lefwStartMacro(cell->getName().getString().c_str());
   CHECKstatus_(status_);
   const PNLBox& abutmentBox(cell->getAbutmentBox());
@@ -266,8 +266,8 @@ int LefDumper::dumpMacro_(PNLDesign* cell) {
   RETURN_CHECKstatus_(status_);
 }
 
-int LefDumper::versionCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDumper* dumpr = (LefDumper*)udata;
+int LEFDumper::versionCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LEFDumper* dumpr = (LEFDumper*)udata;
 
   ostringstream comment;
   comment << "For design <" << dumpr->getNLLibraryName() << ">.";
@@ -280,19 +280,19 @@ int LefDumper::versionCbk_(lefwCallbackType_e, lefiUserData udata) {
   return dumpr->checkStatus(lefwVersion(5, 7));
 }
 
-int LefDumper::busBitCharsCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDumper* dumpr = (LefDumper*)udata;
+int LEFDumper::busBitCharsCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LEFDumper* dumpr = (LEFDumper*)udata;
   lefwNewLine();
   return dumpr->checkStatus(lefwBusBitChars("()"));
 }
 
-int LefDumper::dividerCharCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDumper* dumpr = (LefDumper*)udata;
+int LEFDumper::dividerCharCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LEFDumper* dumpr = (LEFDumper*)udata;
   return dumpr->checkStatus(lefwDividerChar("."));
 }
 
-int LefDumper::unitsCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDumper* dumpr = (LefDumper*)udata;
+int LEFDumper::unitsCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LEFDumper* dumpr = (LEFDumper*)udata;
   lefwNewLine();
 
   int status = lefwStartUnits();
@@ -311,7 +311,7 @@ int LefDumper::unitsCbk_(lefwCallbackType_e, lefiUserData udata) {
                      ,
                      0  // voltage.
                      ,
-                     LefDumper::getUnits()  // database.
+                     LEFDumper::getUnits()  // database.
   );
   if (status != 0)
     return dumpr->checkStatus(status);
@@ -320,7 +320,7 @@ int LefDumper::unitsCbk_(lefwCallbackType_e, lefiUserData udata) {
 
   status = lefwManufacturingGrid(
       PNLTechnology::getOrCreate()
-          ->getManufacturingGrid() /*LefDumper::toLefUnits(PNLUnit::fromGrid(1.0))*/);
+          ->getManufacturingGrid() /*LEFDumper::toLefUnits(PNLUnit::fromGrid(1.0))*/);
 
   if (status != 0)
     return dumpr->checkStatus(status);
@@ -328,12 +328,12 @@ int LefDumper::unitsCbk_(lefwCallbackType_e, lefiUserData udata) {
   return dumpr->checkStatus(status);
 }
 
-int LefDumper::layerCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LEFDumper::layerCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDumper::siteCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDumper* dumpr = (LefDumper*)udata;
+int LEFDumper::siteCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LEFDumper* dumpr = (LEFDumper*)udata;
 
   for (PNLSite* site : PNLTechnology::getOrCreate()->getSites()) {
     // Call lefwSite
@@ -354,8 +354,20 @@ int LefDumper::siteCbk_(lefwCallbackType_e, lefiUserData udata) {
       default:
         break;
     }
+    std::string classType = "";
+    switch (site->getClass()) {
+      case PNLSite::ClassType::Core:
+        classType = "CORE";
+        break;
+      case PNLSite::ClassType::Pad:
+        classType = "PAD";
+        break;
+      default:
+        classType = "UNKNOWN";
+        break;
+    }
     int status = lefwSite(
-        site->getName().getString().c_str(), site->getClass().c_str(),
+        site->getName().getString().c_str(), classType.c_str(),  // Site class
         symmetry == "" ? nullptr : symmetry.c_str(),  // Default orientation
         site->getWidth(), site->getHeight());
 
@@ -375,25 +387,25 @@ int LefDumper::siteCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDumper::extCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LEFDumper::extCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDumper::propDefCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LEFDumper::propDefCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDumper::clearanceMeasureCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LEFDumper::clearanceMeasureCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDumper::endLibCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDumper* dumpr = (LefDumper*)udata;
+int LEFDumper::endLibCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LEFDumper* dumpr = (LEFDumper*)udata;
   return dumpr->checkStatus(lefwEnd());
 }
 
-int LefDumper::macroCbk_(lefwCallbackType_e, lefiUserData udata) {
-  LefDumper* dumpr = (LefDumper*)udata;
+int LEFDumper::macroCbk_(lefwCallbackType_e, lefiUserData udata) {
+  LEFDumper* dumpr = (LEFDumper*)udata;
 
   const std::vector<PNLDesign*>& cells = dumpr->getPNLDesigns();
   std::vector<PNLDesign*>::const_iterator icell = cells.begin();
@@ -404,31 +416,31 @@ int LefDumper::macroCbk_(lefwCallbackType_e, lefiUserData udata) {
   return dumpr->getStatus();
 }
 
-int LefDumper::manufacturingGridCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LEFDumper::manufacturingGridCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDumper::nonDefaultCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LEFDumper::nonDefaultCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDumper::spacingCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LEFDumper::spacingCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDumper::useMinSpacingCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LEFDumper::useMinSpacingCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDumper::viaCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LEFDumper::viaCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-int LefDumper::viaRuleCbk_(lefwCallbackType_e, lefiUserData udata) {
+int LEFDumper::viaRuleCbk_(lefwCallbackType_e, lefiUserData udata) {
   return 0;
 }
 
-void LefDumper::dump(const std::vector<PNLDesign*>& cells,
+void LEFDumper::dump(const std::vector<PNLDesign*>& cells,
                      const string& libraryName) {
   FILE* lefStream = NULL;
   try {
@@ -436,11 +448,11 @@ void LefDumper::dump(const std::vector<PNLDesign*>& cells,
 
     lefStream = fopen(path.c_str(), "w");
     if (lefStream == NULL) {
-      // throw Error("LefDumper::dump(): Cannot open <%s>.",path.c_str());
+      // throw Error("LEFDumper::dump(): Cannot open <%s>.",path.c_str());
       assert(false);
     }
 
-    unique_ptr<LefDumper> dumpr(new LefDumper(cells, libraryName, lefStream));
+    unique_ptr<LEFDumper> dumpr(new LEFDumper(cells, libraryName, lefStream));
     dumpr->write();
   } catch (...) {
     if (lefStream != NULL)
@@ -451,7 +463,7 @@ void LefDumper::dump(const std::vector<PNLDesign*>& cells,
   fclose(lefStream);
 }
 
-void LefDumper::dump(NLLibrary* library) {
+void LEFDumper::dump(NLLibrary* library) {
   string libraryName = "symbolic";
   std::vector<PNLDesign*> cells;
 
@@ -464,5 +476,5 @@ void LefDumper::dump(NLLibrary* library) {
       }
     }
   }
-  LefDumper::dump(cells, libraryName);
+  LEFDumper::dump(cells, libraryName);
 }

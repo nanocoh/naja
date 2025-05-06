@@ -46,7 +46,7 @@
 #include "PNLInstTerm.h"
 #include "PNLDesign.h"
 
-using namespace naja::SNL;
+using namespace naja::NL;
 using namespace naja::DNL;
 using namespace naja::NAJA_OPT;
 
@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
 
   //naja::NajaPerf::Scope scope("Parsing Lef");
   NLUniverse::create();
-  auto lib = LefImport::load("./file.lef"); 
+  auto lib = LEFConstructor::load("./file.lef"); 
   printf("Library loaded %s\n", lib->getName().getString().c_str());
   for (auto design : lib->getPNLDesigns()) {
     printf("Design: %s\n", design->getName().getString().c_str());
@@ -151,7 +151,7 @@ int main(int argc, char* argv[]) {
       printf("--term(%s): %s\n", term->getInstance()->getName().getString().c_str(), term->getName().getString().c_str());
     }
   }
-  naja::NL::LefDumper::dump(lib);
+  naja::NL::LEFDumper::dump(lib);
   DefExport::drive(design, DefExport::WithLEF);
   printf("Done\n");
 }

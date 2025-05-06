@@ -22,7 +22,7 @@ class PNLNet: public PNLDesignObject {
     class Type {
       public:
         enum TypeEnum {
-          Undefined=0, Logical=1, Clock=2, VDD=3, GND=4, Blockage=5
+          Undefined=0, Logical=1, Clock=2, VDD=3, GND=4, Blockage=5, Analog=6
         };
 
         Type(const TypeEnum& typeEnum);

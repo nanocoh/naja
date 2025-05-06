@@ -3,661 +3,294 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+#include "LefImport.h"
 #include <boost/algorithm/string.hpp>
 #include <cstdio>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <memory>
-#include "lefrReader.hpp"
-#include "PNLNet.h"
-#include "PNLTerm.h"
-#include "NLLibrary.h"
-#include "PNLDesign.h"
-#include "PNLPoint.h"
-#include "LefImport.h"
-#include <fstream>
 #include "NLDB.h"
+#include "NLLibrary.h"
 #include "NLName.h"
 #include "NLUniverse.h"
+#include "PNLDesign.h"
+#include "PNLNet.h"
+#include "PNLPoint.h"
 #include "PNLSite.h"
+#include "PNLTerm.h"
 #include "PNLUnit.h"
+#include "lefrReader.hpp"
 
 // sstream
 #include <sstream>
-
-namespace {
-
-class mstream : public std::ostream {
- public:
-  enum StreamMasks {
-    PassThrough = 0x00000001,
-    Verbose0 = 0x00000002,
-    Verbose1 = 0x00000004,
-    Verbose2 = 0x00000008,
-    Info = 0x00000010,
-    Paranoid = 0x00000020,
-    Bug = 0x00000040
-  };
-
- public:
-  static void enable(unsigned int mask);
-  static void disable(unsigned int mask);
-  inline mstream(unsigned int mask, std::ostream& s);
-  inline bool enabled() const;
-  inline unsigned int getStreamMask() const;
-  static inline unsigned int getActiveMask();
-  inline void setStreamMask(unsigned int mask);
-  inline void unsetStreamMask(unsigned int mask);
-  // Overload for formatted outputs.
-  template <typename T>
-  inline mstream& operator<<(T& t);
-  template <typename T>
-  inline mstream& operator<<(T* t);
-  template <typename T>
-  inline mstream& operator<<(const T& t);
-  template <typename T>
-  inline mstream& operator<<(const T* t);
-  inline mstream& put(char c);
-  inline mstream& flush();
-  // Overload for manipulators.
-  inline mstream& operator<<(std::ostream& (*pf)(std::ostream&));
-
-  // Internal: Attributes.
- private:
-  static unsigned int _activeMask;
-  unsigned int _streamMask;
-};
-
-inline mstream::mstream(unsigned int mask, std::ostream& s)
-    : std::ostream(s.rdbuf()), _streamMask(mask) {}
-inline bool mstream::enabled() const {
-  return (_streamMask & _activeMask);
-}
-inline unsigned int mstream::getStreamMask() const {
-  return _streamMask;
-}
-inline unsigned int mstream::getActiveMask() {
-  return _activeMask;
-}
-inline void mstream::setStreamMask(unsigned int mask) {
-  _streamMask |= mask;
-}
-inline void mstream::unsetStreamMask(unsigned int mask) {
-  _streamMask &= ~mask;
-}
-inline mstream& mstream::put(char c) {
-  if (enabled())
-    static_cast<std::ostream*>(this)->put(c);
-  return *this;
-}
-inline mstream& mstream::flush() {
-  if (enabled())
-    static_cast<std::ostream*>(this)->flush();
-  return *this;
-}
-inline mstream& mstream::operator<<(std::ostream& (*pf)(std::ostream&)) {
-  if (enabled())
-    (*pf)(*this);
-  return *this;
-}
-
-// For POD Types.
-template <typename T>
-inline mstream& mstream::operator<<(T& t) {
-  if (enabled()) {
-    *(static_cast<std::ostream*>(this)) << t;
-  }
-  return *this;
-};
-
-template <typename T>
-inline mstream& mstream::operator<<(T* t) {
-  if (enabled()) {
-    *(static_cast<std::ostream*>(this)) << t;
-  }
-  return *this;
-};
-
-template <typename T>
-inline mstream& mstream::operator<<(const T& t) {
-  if (enabled()) {
-    *(static_cast<std::ostream*>(this)) << t;
-  }
-  return *this;
-};
-
-template <typename T>
-inline mstream& mstream::operator<<(const T* t) {
-  if (enabled()) {
-    *(static_cast<std::ostream*>(this)) << t;
-  }
-  return *this;
-};
-
-// For STL Types.
-inline mstream& operator<<(mstream& o, const std::string& s) {
-  if (o.enabled()) {
-    static_cast<std::ostream&>(o) << s;
-  }
-  return o;
-};
-
-// Specific non-member operator overload. Must be one for each type.
-#define MSTREAM_V_SUPPORT(Type)                          \
-  inline mstream& operator<<(mstream& o, Type t) {       \
-    if (o.enabled()) {                                   \
-      static_cast<std::ostream&>(o) << t;                \
-    }                                                    \
-    return o;                                            \
-  };                                                     \
-                                                         \
-  inline mstream& operator<<(mstream& o, const Type t) { \
-    if (o.enabled()) {                                   \
-      static_cast<std::ostream&>(o) << t;                \
-    }                                                    \
-    return o;                                            \
-  };
-
-#define MSTREAM_R_SUPPORT(Type)                           \
-  inline mstream& operator<<(mstream& o, const Type& t) { \
-    if (o.enabled()) {                                    \
-      static_cast<std::ostream&>(o) << t;                 \
-    }                                                     \
-    return o;                                             \
-  };                                                      \
-                                                          \
-  inline mstream& operator<<(mstream& o, Type& t) {       \
-    if (o.enabled()) {                                    \
-      static_cast<std::ostream&>(o) << t;                 \
-    }                                                     \
-    return o;                                             \
-  };
-
-#define MSTREAM_P_SUPPORT(Type)                           \
-  inline mstream& operator<<(mstream& o, const Type* t) { \
-    if (o.enabled()) {                                    \
-      static_cast<std::ostream&>(o) << t;                 \
-    }                                                     \
-    return o;                                             \
-  };                                                      \
-                                                          \
-  inline mstream& operator<<(mstream& o, Type* t) {       \
-    if (o.enabled()) {                                    \
-      static_cast<std::ostream&>(o) << t;                 \
-    }                                                     \
-    return o;                                             \
-  };
-
-unsigned int mstream::_activeMask = 0;
-extern mstream cmess1;
-mstream cmess1(mstream::Verbose0, std::cout);
-
+using std::cerr;
+using std::endl;
+using std::string;
 using namespace std;
 using namespace naja::NL;
-using namespace naja::NL;
 
-#if THIS_IS_DISABLED
-void addSupplyPNLNets(PNLDesign* cell) {
-  PNLNet* vss = PNLNet::create(cell, "vss");
-  vss->setExternal(true);
-  vss->setGlobal(true);
-  vss->setType(PNLNet::Type::GROUND);
-
-  PNLNet* vdd = PNLNet::create(cell, "vdd");
-  vdd->setExternal(true);
-  vdd->setGlobal(true);
-  vdd->setType(PNLNet::Type::POWER);
+inline PNLBox::Unit LEFConstructor::getMinTerminalWidth() const {
+  return minTerminalWidth_;
 }
-#endif
-
-class LefParser {
- public:
-  static void setMergeLibrary(NLLibrary*);
-  static void setGdsForeignDirectory(string);
-  // static       PNLBox::Unit          fromLefUnits             ( int );
-  //  static       Layer*             getLayer                 ( string );
-  //  static       void               addLayer                 ( string, Layer*
-  //  );
-  static void reset();
-  static NLLibrary* parse(string file);
-  LefParser(string file, string libraryName);
-  ~LefParser();
-  inline bool isVH() const;
-  bool isUnmatchedLayer(string);
-  NLLibrary* createNLLibrary();
-  PNLDesign* earlyGetPNLDesign(bool& created, string name = "");
-  PNLNet* earlygetNet(string name);
-  PNLTerm* earlygetTerm(string name);
-  inline string getLibraryName() const;
-  inline NLLibrary* getLibrary(bool create = false);
-  inline string getForeignPath() const;
-  inline void setForeignPath(string);
-  inline const PNLPoint& getForeignPosition() const;
-  inline void setForeignPosition(const PNLPoint&);
-  inline PNLNet* getGdsPower() const;
-  inline void setGdsPower(PNLNet*);
-  inline PNLNet* getGdsGround() const;
-  inline void setGdsGround(PNLNet*);
-  inline PNLDesign* getPNLDesign() const;
-  inline void setPNLDesign(PNLDesign*);
-  // inline       PNLDesignGauge*         getPNLDesignGauge             ()
-  // const; inline       void               setPNLDesignGauge             (
-  // PNLDesignGauge* );
-  inline PNLNet* getNet() const;
-  inline void setPNLNet(PNLNet*);
-  static void setCoreSite(PNLBox::Unit x, PNLBox::Unit y);
-  static PNLBox::Unit getCoreSiteX();
-  static PNLBox::Unit getCoreSiteY();
-  inline PNLBox::Unit getMinTerminalWidth() const;
-  inline double getUnitsMicrons() const;
-  // inline       PNLBox::Unit          fromUnitsMicrons         ( double )
-  // const;
-  inline void setUnitsMicrons(double);
-  inline bool hasErrors() const;
-  inline const vector<string>& getErrors() const;
-  inline void pushError(const string&);
-  int flushErrors();
-  inline void clearErrors();
-  inline int getNthMetal() const;
-  inline void incNthMetal();
-  inline int getNthCut() const;
-  inline void incNthCut();
-  inline int getNthRouting() const;
-  inline void incNthRouting();
-  // inline       RoutingGauge*      getRoutingGauge          () const;
-  inline void addPinComponent(string name, PNLTerm*);
-  inline void clearPinComponents();
-  naja::NL::NLDB* getDB() { return _db; }
-
- private:
-  static int _unitsCbk(lefrCallbackType_e, lefiUnits*, lefiUserData);
-  static int _layerCbk(lefrCallbackType_e, lefiLayer*, lefiUserData);
-  static int _siteCbk(lefrCallbackType_e, lefiSite*, lefiUserData);
-  static int _obstructionCbk(lefrCallbackType_e,
-                             lefiObstruction*,
-                             lefiUserData);
-  static int _macroCbk(lefrCallbackType_e, lefiMacro*, lefiUserData);
-  static int _macroSiteCbk(lefrCallbackType_e,
-                           const lefiMacroSite*,
-                           lefiUserData);
-  static int _macroForeignCbk(lefrCallbackType_e,
-                              const lefiMacroForeign*,
-                              lefiUserData);
-  static int _pinCbk(lefrCallbackType_e, lefiPin*, lefiUserData);
-  void _pinStdPostProcess();
-  void _pinPadPostProcess();
-  static int _viaCbk(lefrCallbackType_e type, lefiVia* via, lefiUserData) {
-    printf("via name %s cb\n", via->name());
-    return 0;
-  }
-  static int _manufacturingCB(lefrCallbackType_e /* unused: c */,
-                              double num,
-                              lefiUserData ud) {
-    // lefinReader* lef = (lefinReader*) ud;
-    // lef->manufacturing(num);
-    PNLTechnology::getOrCreate()->setManufacturingGrid(num);
-    return 0;
-  }
-  static void _logFunction(const char* message);
-
- private:
-  naja::NL::NLDB* _db = nullptr;
-  static string _gdsForeignDirectory;
-  static NLLibrary* _mergeNLLibrary;
-  string _file;
-  string _libraryName;
-  NLLibrary* _library;
-  string _foreignPath;
-  PNLPoint _foreignPosition;
-  PNLNet* _gdsPower;
-  PNLNet* _gdsGround;
-  PNLDesign* _cell;
-  PNLNet* _net;
-  string _busBits;
-  double _unitsMicrons;
-  PNLBox::Unit _oneGrid;
-  map<string, vector<PNLTerm*> > _pinComponents;
-  // static       map<string,Layer*>  _layerLut;
-  vector<string> _unmatchedLayers;
-  vector<string> _errors;
-  int _nthMetal;
-  int _nthCut;
-  int _nthRouting;
-  //  RoutingGauge*       _routingGauge;
-  //  PNLDesignGauge*          _cellGauge;
-  PNLBox::Unit _minTerminalWidth;
-  static PNLBox::Unit _coreSiteX;
-  static PNLBox::Unit _coreSiteY;
-};
-
-// inline       bool              LefParser::isVH                     () const {
-// return _routingGauge->isVH(); }
-inline PNLBox::Unit LefParser::getMinTerminalWidth() const {
-  return _minTerminalWidth;
+inline string LEFConstructor::getLibraryName() const {
+  return libraryName_;
 }
-inline string LefParser::getLibraryName() const {
-  return _libraryName;
-}
-inline NLLibrary* LefParser::getLibrary(bool create) {
-  if (not _library and create)
+inline NLLibrary* LEFConstructor::getLibrary(bool create) {
+  if (not library_ and create)
     createNLLibrary();
-  return _library;
+  return library_;
 }
-inline PNLDesign* LefParser::getPNLDesign() const {
-  return _cell;
+inline PNLDesign* LEFConstructor::getPNLDesign() const {
+  return cell_;
 }
-inline void LefParser::setPNLDesign(PNLDesign* cell) {
-  printf("setPNLDesign %p\n", (void*)cell);
-  _cell = cell;
+inline void LEFConstructor::setPNLDesign(PNLDesign* cell) {
+  cell_ = cell;
 }
-inline string LefParser::getForeignPath() const {
-  return _foreignPath;
+inline string LEFConstructor::getForeignPath() const {
+  return foreignPath_;
 }
-inline void LefParser::setForeignPath(string path) {
-  _foreignPath = path;
+inline void LEFConstructor::setForeignPath(string path) {
+  foreignPath_ = path;
 }
-inline const PNLPoint& LefParser::getForeignPosition() const {
-  return _foreignPosition;
+inline const PNLPoint& LEFConstructor::getForeignPosition() const {
+  return foreignPosition_;
 }
-inline void LefParser::setForeignPosition(const PNLPoint& position) {
-  _foreignPosition = position;
+inline void LEFConstructor::setForeignPosition(const PNLPoint& position) {
+  foreignPosition_ = position;
 }
-inline PNLNet* LefParser::getGdsPower() const {
-  return _gdsPower;
+inline PNLNet* LEFConstructor::getGdsPower() const {
+  return gdsPower_;
 }
-inline void LefParser::setGdsPower(PNLNet* net) {
-  _gdsPower = net;
+inline void LEFConstructor::setGdsPower(PNLNet* net) {
+  gdsPower_ = net;
 }
-inline PNLNet* LefParser::getGdsGround() const {
-  return _gdsGround;
+inline PNLNet* LEFConstructor::getGdsGround() const {
+  return gdsGround_;
 }
-inline void LefParser::setGdsGround(PNLNet* net) {
-  _gdsGround = net;
+inline void LEFConstructor::setGdsGround(PNLNet* net) {
+  gdsGround_ = net;
 }
-// inline       void              LefParser::setPNLDesignGauge             (
-// PNLDesignGauge* gauge ) { _cellGauge=gauge; }
-inline PNLNet* LefParser::getNet() const {
-  return _net;
+inline PNLNet* LEFConstructor::getNet() const {
+  return net_;
 }
-inline void LefParser::setPNLNet(PNLNet* net) {
-  _net = net;
+inline void LEFConstructor::setPNLNet(PNLNet* net) {
+  net_ = net;
 }
-inline double LefParser::getUnitsMicrons() const {
-  return _unitsMicrons;
+inline double LEFConstructor::getUnitsMicrons() const {
+  return unitsMicrons_;
 }
-inline void LefParser::setUnitsMicrons(double precision) {
-  _unitsMicrons = precision;
+inline void LEFConstructor::setUnitsMicrons(double precision) {
+  unitsMicrons_ = precision;
 }
-inline int LefParser::getNthMetal() const {
-  return _nthMetal;
+inline int LEFConstructor::getNthMetal() const {
+  return nthMetal_;
 }
-inline void LefParser::incNthMetal() {
-  ++_nthMetal;
+inline void LEFConstructor::incNthMetal() {
+  ++nthMetal_;
 }
-inline int LefParser::getNthCut() const {
-  return _nthCut;
+inline int LEFConstructor::getNthCut() const {
+  return nthCut_;
 }
-inline void LefParser::incNthCut() {
-  ++_nthCut;
+inline void LEFConstructor::incNthCut() {
+  ++nthCut_;
 }
-inline int LefParser::getNthRouting() const {
-  return _nthRouting;
+inline int LEFConstructor::getNthRouting() const {
+  return nthRouting_;
 }
-inline void LefParser::incNthRouting() {
-  ++_nthRouting;
+inline void LEFConstructor::incNthRouting() {
+  ++nthRouting_;
 }
-// inline       RoutingGauge*     LefParser::getRoutingGauge          () const {
-// return _routingGauge; } inline       PNLDesignGauge*
-// LefParser::getPNLDesignGauge             () const { return _cellGauge; }
-inline void LefParser::setCoreSite(PNLBox::Unit x, PNLBox::Unit y) {
-  _coreSiteX = x;
-  _coreSiteY = y;
+inline void LEFConstructor::setCoreSite(PNLBox::Unit x, PNLBox::Unit y) {
+  coreSiteX_ = x;
+  coreSiteY_ = y;
 }
-inline PNLBox::Unit LefParser::getCoreSiteX() {
-  return _coreSiteX;
+inline PNLBox::Unit LEFConstructor::getCoreSiteX() {
+  return coreSiteX_;
 }
-inline PNLBox::Unit LefParser::getCoreSiteY() {
-  return _coreSiteY;
+inline PNLBox::Unit LEFConstructor::getCoreSiteY() {
+  return coreSiteY_;
 }
-inline bool LefParser::hasErrors() const {
-  return not _errors.empty();
+inline bool LEFConstructor::hasErrors() const {
+  return not errors_.empty();
 }
-inline const vector<string>& LefParser::getErrors() const {
-  return _errors;
+inline const vector<string>& LEFConstructor::getErrors() const {
+  return errors_;
 }
-inline void LefParser::pushError(const string& error) {
-  _errors.push_back(error);
+inline void LEFConstructor::pushError(const string& error) {
+  errors_.push_back(error);
 }
-inline void LefParser::clearErrors() {
-  return _errors.clear();
+inline void LEFConstructor::clearErrors() {
+  return errors_.clear();
 }
-inline void LefParser::addPinComponent(string name, PNLTerm* comp) {
-  _pinComponents[name].push_back(comp);
+inline void LEFConstructor::addPinComponent(string name, PNLTerm* comp) {
+  pinComponents_[name].push_back(comp);
 }
-inline void LefParser::clearPinComponents() {
-  _pinComponents.clear();
+inline void LEFConstructor::clearPinComponents() {
+  pinComponents_.clear();
 }
 
-// inline PNLBox::Unit  LefParser::fromUnitsMicrons ( double d ) const
-// {
-//   PNLBox::Unit u = PNLUnit::fromPhysical(d,PNLUnit::Micro);
-//   if (u % _oneGrid) {
-//     // cerr << Error( "LefParser::fromUnitsMicrons(): Offgrid value %s
-//     (DbU=%d), grid %s (DbU=%d)."
-//     //              , PNLUnit::getValueString(u).c_str(), u
-//     //              , PNLUnit::getValueString(_oneGrid).c_str(), _oneGrid )
-//     //      << endl;
-//     assert(false);
-//   }
-//   return u;
-// }
+string LEFConstructor::gdsForeignDirectory_ = "";
+NLLibrary* LEFConstructor::mergeNLLibrary_ = nullptr;
+PNLBox::Unit LEFConstructor::coreSiteX_ = 0;
+PNLBox::Unit LEFConstructor::coreSiteY_ = 0;
 
-string LefParser::_gdsForeignDirectory = "";
-NLLibrary* LefParser::_mergeNLLibrary = nullptr;
-// map<string,Layer*>  LefParser::_layerLut;
-PNLBox::Unit LefParser::_coreSiteX = 0;
-PNLBox::Unit LefParser::_coreSiteY = 0;
-
-void LefParser::setMergeLibrary(NLLibrary* library) {
-  _mergeNLLibrary = library;
+void LEFConstructor::setMergeLibrary(NLLibrary* library) {
+  mergeNLLibrary_ = library;
 }
 
-void LefParser::setGdsForeignDirectory(string path) {
-  _gdsForeignDirectory = path;
+void LEFConstructor::setGdsForeignDirectory(string path) {
+  gdsForeignDirectory_ = path;
 }
 
-void LefParser::reset() {
-  // _layerLut.clear();
-  _coreSiteX = 0;
-  _coreSiteY = 0;
+void LEFConstructor::reset() {
+  coreSiteX_ = 0;
+  coreSiteY_ = 0;
 }
 
-// Layer* LefParser::getLayer ( string layerName )
-// {
-//   //auto item = _layerLut.find( layerName );
-//   //if (item != _layerLut.end()) return (*item).second;
-//   return NULL;
-// }
-
-// void  LefParser::addLayer ( string layerName, Layer* layer )
-// {
-//   if (getLayer(layerName)) {
-//     cerr << Warning( "LefParser::addLayer(): Duplicated layer name \"%s\"
-//     (ignored).", layerName.c_str() ); return;
-//   }
-
-//   _layerLut[ layerName ] = layer;
-// }
-
-bool LefParser::isUnmatchedLayer(string layerName) {
-  for (string layer : _unmatchedLayers) {
+bool LEFConstructor::isUnmatchedLayer(string layerName) {
+  for (string layer : unmatchedLayers_) {
     if (layer == layerName)
       return true;
   }
   return false;
 }
 
-LefParser::LefParser(string file, string libraryName)
-    : _file(file),
-      _libraryName(libraryName),
-      _library(nullptr),
-      _foreignPath(),
-      _foreignPosition(PNLPoint(0, 0)),
-      _gdsPower(nullptr),
-      _gdsGround(nullptr),
-      _cell(nullptr),
-      _net(nullptr),
-      _busBits("()"),
-      _unitsMicrons(0.01)
-      // , _oneGrid         (PNLUnit::fromGrid(1.0))
-      ,
-      _unmatchedLayers(),
-      _errors(),
-      _nthMetal(0),
-      _nthCut(0),
-      _nthRouting(0)
-// , _routingGauge    (nullptr)
-// , _cellGauge       (nullptr)
-//,
-//_minTerminalWidth(PNLUnit::fromPhysical(Cfg::getParamDouble("lefImport.minTerminalWidth",0.0)->asDouble(),PNLBox::UnitPower::Micro))
-{
-  // _routingGauge = AllianceFramework::get()->getRoutingGauge();
-  // _cellGauge    = AllianceFramework::get()->getPNLDesignGauge();
-
-  // if (not _routingGauge)
-  //   throw Error( "LefParser::LefParser(): No default routing gauge defined in
-  //   Alliance framework." );
-
-  // if (not _cellGauge)
-  //   throw Error( "LefParser::LefParser(): No default cell gauge defined in
-  //   Alliance framework." );
-
-  // string unmatcheds =
-  // Cfg::getParamString("lefImport.unmatchedLayers","")->asString(); if (not
-  // unmatcheds.empty()) {
-  //   size_t ibegin = 0;
-  //   size_t iend   = unmatcheds.find( ',', ibegin );
-  //   while (iend != string::npos) {
-  //     _unmatchedLayers.push_back( unmatcheds.substr(ibegin,iend-ibegin) );
-  //     ibegin = iend+1;
-  //     iend   = unmatcheds.find( ',', ibegin );
-  //   }
-  //   _unmatchedLayers.push_back( unmatcheds.substr(ibegin) );
-  // }
-  printf("LefParser::LefParser(): %s\n", file.c_str());
-  lefrSetLogFunction(_logFunction);
+LEFConstructor::LEFConstructor(string file, string libraryName)
+    : file_(file),
+      libraryName_(libraryName),
+      library_(nullptr),
+      foreignPath_(),
+      foreignPosition_(PNLPoint(0, 0)),
+      gdsPower_(nullptr),
+      gdsGround_(nullptr),
+      cell_(nullptr),
+      net_(nullptr),
+      busBits_("()"),
+      unitsMicrons_(0.01),
+      unmatchedLayers_(),
+      errors_(),
+      nthMetal_(0),
+      nthCut_(0),
+      nthRouting_(0) {
+  lefrSetLogFunction(logFunction_);
   lefrInit();
-  lefrSetUnitsCbk(_unitsCbk);
-  lefrSetLayerCbk(_layerCbk);
-  lefrSetSiteCbk(_siteCbk);
-  lefrSetObstructionCbk(_obstructionCbk);
-  lefrSetMacroCbk(_macroCbk);
-  lefrSetMacroSiteCbk(_macroSiteCbk);
-  lefrSetMacroForeignCbk(_macroForeignCbk);
-  lefrSetPinCbk(_pinCbk);
-  lefrSetViaCbk(_viaCbk);
-  lefrSetManufacturingCbk(_manufacturingCB);
+  lefrSetUnitsCbk(unitsCbk_);
+  lefrSetLayerCbk(layerCbk_);
+  lefrSetSiteCbk(siteCbk_);
+  lefrSetObstructionCbk(obstructionCbk_);
+  lefrSetMacroCbk(macroCbk_);
+  lefrSetMacroSiteCbk(macroSiteCbk_);
+  lefrSetMacroForeignCbk(macroForeignCbk_);
+  lefrSetPinCbk(pinCbk_);
+  lefrSetViaCbk(viaCbk_);
+  lefrSetManufacturingCbk(manufacturingCB_);
 }
 
-LefParser::~LefParser() {
+LEFConstructor::~LEFConstructor() {
   lefrReset();
 }
 
-NLLibrary* LefParser::createNLLibrary() {
-  if (_mergeNLLibrary) {
-    _library = _mergeNLLibrary;
-    return _library;
+NLLibrary* LEFConstructor::createNLLibrary() {
+  if (mergeNLLibrary_) {
+    library_ = mergeNLLibrary_;
+    return library_;
   }
-  _db = NLDB::create(NLUniverse::get());
-  NLLibrary* rootNLLibrary = NLLibrary::create(_db, NLName("LIB1"));
+  db_ = NLDB::create(NLUniverse::get());
+  NLLibrary* rootNLLibrary = NLLibrary::create(db_, NLName("LIB1"));
 
   NLLibrary* lefRootNLLibrary = NLLibrary::create(rootNLLibrary, NLName("LEF"));
 
-  _library = lefRootNLLibrary->getLibrary(NLName(_libraryName));
-  if (_library) {
+  library_ = lefRootNLLibrary->getLibrary(NLName(libraryName_));
+  if (library_) {
     assert(false);
     // Error
   } else {
-    _library = NLLibrary::create(lefRootNLLibrary, NLName(_libraryName));
+    library_ = NLLibrary::create(lefRootNLLibrary, NLName(libraryName_));
   }
-  return _library;
+  return library_;
 }
 
-PNLDesign* LefParser::earlyGetPNLDesign(bool& created, string name) {
-  if (not _cell) {
-    printf("here2\n");
+PNLDesign* LEFConstructor::earlyGetPNLDesign(bool& created, string name) {
+  if (not cell_) {
     if (name.empty())
       name = "EarlyLEFPNLDesign";
-    _cell = getLibrary(true)->getPNLDesign(NLName(name));
-    if (not _cell) {
+    cell_ = getLibrary(true)->getPNLDesign(NLName(name));
+    if (not cell_) {
       created = true;
-      _cell = PNLDesign::create(getLibrary(true), NLName(name));
+      cell_ = PNLDesign::create(getLibrary(true), NLName(name));
     }
   }
-  printf("name %s design name %s\n", name.c_str(),
-         _cell->getName().getString().c_str());
-  return _cell;
+  return cell_;
 }
 
-PNLNet* LefParser::earlygetNet(string name) {
+PNLNet* LEFConstructor::earlygetNet(string name) {
   bool created = false;
-  if (not _cell)
+  if (not cell_)
     earlyGetPNLDesign(created);
-  PNLNet* net = _cell->getNet(NLName(name));
+  PNLNet* net = cell_->getNet(NLName(name));
   if (not net)
-    net = _cell->addNet(NLName(name));
+    net = cell_->addNet(NLName(name));
   return net;
 }
 
-PNLTerm* LefParser::earlygetTerm(string name) {
+PNLTerm* LEFConstructor::earlygetTerm(string name) {
   bool created = false;
-  if (not _cell)
+  if (not cell_)
     earlyGetPNLDesign(created);
-  PNLTerm* term = _cell->getTerm(NLName(name));
+  PNLTerm* term = cell_->getTerm(NLName(name));
   if (not term)
-    term = _cell->addTerm(NLName(name));
+    term = cell_->addTerm(NLName(name));
   return term;
 }
 
-void LefParser::_logFunction(const char* message) {
+void LEFConstructor::logFunction_(const char* message) {
   std::cout << message << std::endl;
 }
 
-int LefParser::_unitsCbk(lefrCallbackType_e c,
-                         lefiUnits* units,
-                         lefiUserData ud) {
-  LefParser* parser = (LefParser*)ud;
+int LEFConstructor::unitsCbk_(lefrCallbackType_e c,
+                              lefiUnits* units,
+                              lefiUserData ud) {
+  LEFConstructor* parser = (LEFConstructor*)ud;
 
   if (units->hasDatabase()) {
-    parser->_unitsMicrons = 1.0 / units->databaseNumber();
-    cerr << "     - Precision: " << parser->_unitsMicrons
+    parser->unitsMicrons_ = 1.0 / units->databaseNumber();
+    cerr << "     - Precision: " << parser->unitsMicrons_
          << " (LEF MICRONS scale factor:" << units->databaseNumber() << ")"
          << endl;
   }
   return 0;
 }
 
-int LefParser::_layerCbk(lefrCallbackType_e c,
-                         lefiLayer* lefLayer,
-                         lefiUserData ud) {
+int LEFConstructor::layerCbk_(lefrCallbackType_e c,
+                              lefiLayer* lefLayer,
+                              lefiUserData ud) {
   return 0;
 }
 
-int LefParser::_siteCbk(lefrCallbackType_e c, lefiSite* site, lefiUserData ud) {
-  printf("LefParser::_siteCbk\n");
-  LefParser* parser = (LefParser*)ud;
-  string siteClass = "";
+int LEFConstructor::siteCbk_(lefrCallbackType_e c,
+                             lefiSite* site,
+                             lefiUserData ud) {
+  LEFConstructor* parser = (LEFConstructor*)ud;
+  PNLSite::ClassType siteClass = PNLSite::ClassType::Unknown;
   if (site->hasClass()) {
-    siteClass = site->siteClass();
-    boost::to_upper(siteClass);
+    std::string classType = site->siteClass();
+    boost::to_upper(classType);
+    if (classType == "CORE") {
+      siteClass = PNLSite::ClassType::Core;
+    } else if (classType == "PAD") {
+      siteClass = PNLSite::ClassType::Pad;
+    } else {
+      siteClass = PNLSite::ClassType::Unknown;
+    }
   }
   PNLBox::Unit lefSiteWidth =
-        site->sizeX();  // PNLUnit::fromPhysical( site->sizeX(), PNLUnit::Micro
-                        // );
+      site->sizeX();  // PNLUnit::fromPhysical( site->sizeX(), PNLUnit::Micro
+                      // );
   PNLBox::Unit lefSiteHeight =
-        site->sizeY();  // PNLUnit::fromPhysical( site->sizeY(), PNLUnit::Micro
+      site->sizeY();  // PNLUnit::fromPhysical( site->sizeY(), PNLUnit::Micro
   auto pnlSite = PNLSite::create(NLName(site->name()), siteClass, lefSiteWidth,
-                    lefSiteHeight);
+                                 lefSiteHeight);
   if (site->hasXSymmetry() && site->hasYSymmetry()) {
     pnlSite->setSymmetry(PNLSite::Symmetry::X_Y);
   } else if (site->hasXSymmetry()) {
@@ -670,12 +303,12 @@ int LefParser::_siteCbk(lefrCallbackType_e c, lefiSite* site, lefiUserData ud) {
   return 0;
 }
 
-int LefParser::_macroForeignCbk(lefrCallbackType_e c,
-                                const lefiMacroForeign* foreign,
-                                lefiUserData ud) {
-  printf("LefParser::_macroForeignCbk\n");
+int LEFConstructor::macroForeignCbk_(lefrCallbackType_e c,
+                                     const lefiMacroForeign* foreign,
+                                     lefiUserData ud) {
+  printf("LEFConstructor::macroForeignCbk_\n");
   printf("cellName %s\n", foreign->cellName());
-  LefParser* parser = (LefParser*)ud;
+  LEFConstructor* parser = (LEFConstructor*)ud;
 
   bool created = false;
   PNLDesign* cell = parser->earlyGetPNLDesign(created, foreign->cellName());
@@ -683,13 +316,13 @@ int LefParser::_macroForeignCbk(lefrCallbackType_e c,
 
   cell->setTerminalNetlist(true);
   if (created) {
-    if (_gdsForeignDirectory.empty()) {
-      // cerr << Warning( "LefParser::_macroForeignCbk(): GDS directory *not*
-      // set, ignoring FOREIGN statement." ) << endl;
+    if (gdsForeignDirectory_.empty()) {
+      // cerr << Warning( "LEFConstructor::macroForeignCbk_(): GDS directory
+      // *not* set, ignoring FOREIGN statement." ) << endl;
       return 0;
     }
 
-    string gdsPath = _gdsForeignDirectory + "/" + foreign->cellName() + ".gds";
+    string gdsPath = gdsForeignDirectory_ + "/" + foreign->cellName() + ".gds";
     parser->setForeignPath(gdsPath);
 
     // Gds::setTopPNLDesignName( foreign->cellName() );
@@ -721,90 +354,18 @@ int LefParser::_macroForeignCbk(lefrCallbackType_e c,
   return 0;
 }
 
-int LefParser::_obstructionCbk(lefrCallbackType_e c,
-                               lefiObstruction* obstruction,
-                               lefiUserData ud) {
-  printf("LefParser::_obstructionCbk\n");
-  //   LefParser* parser = (LefParser*)ud;
-
-  //   const Layer* layer         = NULL;
-  //   const Layer* blockageLayer = NULL;
-  //         PNLDesign*  cell          = parser->getPNLDesign();
-  //         PNLNet*   blockagePNLNet   = cell->getNet( "blockage" );
-
-  //   if (not blockagePNLNet) {
-  //     blockagePNLNet = PNLNet::create( cell, "blockage" );
-  //     blockagePNLNet->setType( PNLNet::Type::BLOCKAGE );
-  //   }
-
-  // //cerr << "       @ _obstructionCbk: " << blockagePNLNet->getName() <<
-  // endl;
-
-  //   lefiGeometries* geoms = obstruction->geometries();
-  //   for ( int igeom=0 ; igeom < geoms->numItems() ; ++ igeom ) {
-  //     if (geoms->itemType(igeom) == lefiGeomLayerE) {
-  //       layer         = parser->getLayer( geoms->getLayer(igeom) );
-  //       blockageLayer = layer->getBlockageLayer();
-  //     }
-  //     if (not blockageLayer) {
-  //       cerr << Error( "DefImport::_obstructionCbk(): No blockage layer
-  //       associated to \"%s\".\n"
-  //                      "        (while parsing \"%s\")"
-  //                    , getString( layer->getName() ).c_str()
-  //                    , getString( cell ).c_str()
-  //                    ) << endl;
-  //       continue;
-  //     }
-
-  //     if (geoms->itemType(igeom) == lefiGeomRectE) {
-  //       lefiGeomRect* r         = geoms->getRect(igeom);
-  //       double        w         = r->xh - r->xl;
-  //       double        h         = r->yh - r->yl;
-  //       Segment*      segment   = NULL;
-  //       if (w >= h) {
-  //         segment = Horizontal::create( blockagePNLNet, blockageLayer
-  //                                     , parser->fromUnitsMicrons( (r->yl +
-  //                                     r->yh)/2 ) , parser->fromUnitsMicrons(
-  //                                     h  ) , parser->fromUnitsMicrons( r->xl
-  //                                     ) , parser->fromUnitsMicrons( r->xh )
-  //                                     );
-  //       } else {
-  //         segment = Vertical::create( blockagePNLNet, blockageLayer
-  //                                   , parser->fromUnitsMicrons( (r->xl +
-  //                                   r->xh)/2 ) , parser->fromUnitsMicrons( w
-  //                                   ) , parser->fromUnitsMicrons( r->yl ) ,
-  //                                   parser->fromUnitsMicrons( r->yh )
-  //                                   );
-  //       }
-  //       cdebug_log(100,0) << "| " << segment << endl;
-  //     }
-
-  //     if (geoms->itemType(igeom) == lefiGeomPolygonE) {
-  //       lefiGeomPolygon* polygon = geoms->getPolygon(igeom);
-  //       vector<PNLPoint>    points;
-  //       for ( int ipoint=0 ; ipoint<polygon->numPNLPoints ; ++ipoint ) {
-  //         points.push_back( PNLPoint(
-  //         parser->fromUnitsMicrons(polygon->x[ipoint])
-  //                                ,
-  //                                parser->fromUnitsMicrons(polygon->y[ipoint])
-  //                                ));
-  //       }
-  //       points.push_back( PNLPoint( parser->fromUnitsMicrons(polygon->x[0])
-  //                              , parser->fromUnitsMicrons(polygon->y[0]) ));
-  //       Rectilinear::create( blockagePNLNet, blockageLayer, points );
-  //       continue;
-  //     }
-  //   }
-
+int LEFConstructor::obstructionCbk_(lefrCallbackType_e c,
+                                    lefiObstruction* obstruction,
+                                    lefiUserData ud) {
   return 0;
 }
 
-int LefParser::_macroCbk(lefrCallbackType_e c,
-                         lefiMacro* macro,
-                         lefiUserData ud) {
-  printf("LefParser::_macroCbk\n");
+int LEFConstructor::macroCbk_(lefrCallbackType_e c,
+                              lefiMacro* macro,
+                              lefiUserData ud) {
+  printf("LEFConstructor::macroCbk_\n");
   // AllianceFramework* af     = AllianceFramework::get();
-  LefParser* parser = (LefParser*)ud;
+  LEFConstructor* parser = (LEFConstructor*)ud;
 
   // parser->setPNLDesignGauge( nullptr );
 
@@ -838,14 +399,7 @@ int LefParser::_macroCbk(lefrCallbackType_e c,
     substrings.push_back(word);
   }
 
-  // // Print the substrings
-  // for (const auto& substring : substrings) {
-  //     std::cout << substring << std::endl;
-  // }
-
   if (substrings[0] == "CORE") {
-    //          CORE, CORE_FEEDTHRU, CORE_TIEHIGH, CORE_TIELOW, CORE_SPACER,
-    //          CORE_ANTENNACELL, CORE_WELLTAP,
     if (substrings.size() > 1) {
       if (substrings[1] == "FEEDTHRU") {
         cell->setClassType(PNLDesign::ClassType::CORE_FEEDTHRU);
@@ -931,49 +485,22 @@ int LefParser::_macroCbk(lefrCallbackType_e c,
   string gaugeName = "Unknown SITE";
   if (macro->hasSiteName()) {
     std::string siteName = macro->siteName();
-    PNLSite* site = PNLTechnology::getOrCreate()->getSiteByName(NLName(siteName));
+    PNLSite* site =
+        PNLTechnology::getOrCreate()->getSiteByName(NLName(siteName));
     cell->setSite(site);
-    // gaugeName = string("LEF.") + macro->siteName();
-    // PNLDesignGauge* cg = af->getPNLDesignGauge( gaugeName );
-    // if (cg) {
-    //   isPad = cg->isPad();
-    //   if (cg->getSliceHeight() != height) {
-    //     cerr << Warning( "LefParser::_macroCbk(): PNLDesign height %s do not
-    //     match PNLDesignGauge/SITE \"%s\" of %s."
-    //                    , PNLUnit::getValueString(height).c_str()
-    //                    , getString(cg->getName()).c_str()
-    //                    ,
-    //                    PNLUnit::getValueString(cg->getSliceHeight()).c_str()
-    //                    ) << endl;
-    //   }
-    //   parser->setPNLDesignGauge( cg );
-    // } else {
-    //   cerr << Warning( "LefParser::_macroCbk(): No PNLDesignGauge associated
-    //   to SITE \"%s\"."
-    //                  , macro->siteName() ) << endl;
-    // }
+    if (site->getClass() == PNLSite::ClassType::Pad) {
+      isPad = true;
+    }
   }
 
   if (not isPad)
-    parser->_pinStdPostProcess();
+    parser->pinStdPostProcess_();
   else
-    parser->_pinPadPostProcess();
+    parser->pinPadPostProcess_();
   parser->clearPinComponents();
-
-  // cerr << "     o " << cellName
-  //      << " " << PNLUnit::getValueString(width) << " " <<
-  //      PNLUnit::getValueString(height)
-  //      << " " << gaugeName;
   if (isPad)
     cerr << " (PAD)";
   cerr << endl;
-
-  // Catalog::State* state = af->getCatalog()->getState( cellName );
-  // if (not state) state = af->getCatalog()->getState ( cellName, true );
-  // state->setFlags( Catalog::State::Logical
-  //                | Catalog::State::Physical
-  //                | Catalog::State::InMemory
-  //                | Catalog::State::Termina∂lPNLNetlist, true );
   cell->setTerminalNetlist(true);
   parser->setPNLDesign(nullptr);
   parser->setGdsPower(nullptr);
@@ -982,32 +509,31 @@ int LefParser::_macroCbk(lefrCallbackType_e c,
   return 0;
 }
 
-int LefParser::_macroSiteCbk(lefrCallbackType_e c,
-                             const lefiMacroSite* site,
-                             lefiUserData ud) {
-  printf("LefParser::_macroSiteCbk\n");
-  // AllianceFramework* af     = AllianceFramework::get();
-  //  LefParser*         parser = (LefParser*)ud;
-
-  // //parser->setPNLDesignGauge( nullptr );
-
-  // bool       created  = false;
-  // string     cellName = site->siteName();
-  // PNLBox::Unit  width    = 0;
-  // PNLBox::Unit  height   = 0;
-  // PNLDesign*      cell     = parser->earlyGetPNLDesign( created , cellName);
-
-  // if (cell->getName() != NLName(cellName)) {
-  //   cell->setName( NLName(cellName) );
-  // }
+int LEFConstructor::viaCbk_(lefrCallbackType_e type,
+                            lefiVia* via,
+                            lefiUserData) {
+  return 0;
+}
+int LEFConstructor::manufacturingCB_(lefrCallbackType_e /* unused: c */,
+                                     double num,
+                                     lefiUserData ud) {
+  PNLTechnology::getOrCreate()->setManufacturingGrid(num);
   return 0;
 }
 
-int LefParser::_pinCbk(lefrCallbackType_e c, lefiPin* pin, lefiUserData ud) {
-  printf("LefParser::_pinCbk %s\n", pin->name());
-  LefParser* parser = (LefParser*)ud;
+int LEFConstructor::macroSiteCbk_(lefrCallbackType_e c,
+                                  const lefiMacroSite* site,
+                                  lefiUserData ud) {
+  return 0;
+}
 
-  // cerr << "       @ _pinCbk: " << pin->name() << endl;
+int LEFConstructor::pinCbk_(lefrCallbackType_e c,
+                            lefiPin* pin,
+                            lefiUserData ud) {
+  printf("LEFConstructor::pinCbk_ %s\n", pin->name());
+  LEFConstructor* parser = (LEFConstructor*)ud;
+
+  // cerr << "       @ pinCbk_: " << pin->name() << endl;
 
   bool created = false;
   parser->earlyGetPNLDesign(created);
@@ -1019,15 +545,17 @@ int LefParser::_pinCbk(lefrCallbackType_e c, lefiPin* pin, lefiUserData ud) {
     string lefUse = pin->use();
     boost::to_upper(lefUse);
 
-    if (lefUse == "SIGNAL")
+    if (lefUse == "SIGNAL") {
       netType = PNLNet::Type::TypeEnum::Logical;
-    // if (lefUse == "ANALOG") netType = PNLNet::Type::ANALOG;
-    if (lefUse == "CLOCK")
-      netType = PNLNet::Type::TypeEnum::Clock;
-    if (lefUse == "POWER")
+    } else if (lefUse == "POWER") {
       netType = PNLNet::Type::TypeEnum::VDD;
-    if (lefUse == "GROUND")
+    } else if (lefUse == "GROUND") {
       netType = PNLNet::Type::TypeEnum::GND;
+    } else if (lefUse == "CLOCK") {
+      netType = PNLNet::Type::TypeEnum::Clock;
+    } else if (lefUse == "ANALOG") {
+      netType = PNLNet::Type::TypeEnum::Analog;
+    }
   }
 
   if ((netType == PNLNet::Type::TypeEnum::VDD) and parser->getGdsPower()) {
@@ -1071,18 +599,16 @@ int LefParser::_pinCbk(lefrCallbackType_e c, lefiPin* pin, lefiUserData ud) {
   return 0;
 }
 
-void LefParser::_pinStdPostProcess() {
-}
+void LEFConstructor::pinStdPostProcess_() {}
 
-void LefParser::_pinPadPostProcess() {
-}
+void LEFConstructor::pinPadPostProcess_() {}
 
-int LefParser::flushErrors() {
+int LEFConstructor::flushErrors() {
   int code = (hasErrors()) ? 1 : 0;
 
-  for (size_t ierror = 0; ierror < _errors.size(); ++ierror) {
-    // string message = "LefImport::load(): " + _errors[ierror];
-    // cerr << Error(message.c_str(),getString(_library->getName()).c_str()) <<
+  for (size_t ierror = 0; ierror < errors_.size(); ++ierror) {
+    // string message = "LefImport::load(): " + errors_[ierror];
+    // cerr << Error(message.c_str(),getString(library_->getName()).c_str()) <<
     // endl;
     assert(false);
   }
@@ -1091,11 +617,7 @@ int LefParser::flushErrors() {
   return code;
 }
 
-NLLibrary* LefParser::parse(string file) {
-  cmess1 << "  o  LEF: <" << file << ">" << endl;
-
-  // PNLUnit::setStringMode( PNLUnit::Physical, PNLUnit::Micro );
-
+NLLibrary* LEFConstructor::parse(string file) {
   size_t iext = file.rfind('.');
   if (file.compare(iext, 4, ".lef") != 0) {
     // throw Error( "LefImport::load(): DEF files must have  \".lef\" extension
@@ -1109,7 +631,7 @@ NLLibrary* LefParser::parse(string file) {
   // string                libraryName = file.substr( islash,
   // file.size()-4-islash );
   string libraryName = "LoadedLibrary";
-  unique_ptr<LefParser> parser(new LefParser(file, libraryName));
+  unique_ptr<LEFConstructor> parser(new LEFConstructor(file, libraryName));
   // std::ifstream f("file.lef");
   // if (f.is_open())
   //     std::cout << f.rdbuf();
@@ -1127,33 +649,8 @@ NLLibrary* LefParser::parse(string file) {
   return parser->getLibrary();
 }
 
-}  // Anonymous namespace.
-
-// namespace CRL {
-
-using std::cerr;
-using std::endl;
-using std::string;
-// using Hurricane::UpdateSession;
-
-NLLibrary* LefImport::load(string fileName) {
-  // UpdateSession::open ();
-
+NLLibrary* LEFConstructor::load(string fileName) {
   NLLibrary* library = NULL;
-  // #if defined(HAVE_LEFDEF)
-  library = LefParser::parse(fileName);
-
+  library = LEFConstructor::parse(fileName);
   return library;
-}
-
-void LefImport::reset() {
-  LefParser::reset();
-}
-
-void LefImport::setMergeLibrary(NLLibrary* library) {
-  LefParser::setMergeLibrary(library);
-}
-
-void LefImport::setGdsForeignDirectory(string path) {
-  LefParser::setGdsForeignDirectory(path);
 }
