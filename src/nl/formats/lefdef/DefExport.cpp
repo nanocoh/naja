@@ -1,845 +1,683 @@
-// SPDX-FileCopyrightText: 2025 The Naja authors <https://github.com/najaeda/naja/blob/main/AUTHORS>
+// SPDX-FileCopyrightText: 2025 The Naja authors
+// <https://github.com/najaeda/naja/blob/main/AUTHORS>
 //
 // SPDX-License-Identifier: Apache-2.0
 
-#include  <memory>
-#include  "PNLNet.h"
-#include  "PNLDesign.h"
-#include  "NLLibrary.h"
-#include "PNLOrientation.h"
-#include  "LefExport.h"
-#include  "DefExport.h"
-#include "PNLTransform.h"
+#include "DefExport.h"
+#include <memory>
+#include "LefExport.h"
+#include "NLLibrary.h"
 #include "PNLBox.h"
+#include "PNLDesign.h"
 #include "PNLInstance.h"
+#include "PNLNet.h"
+#include "PNLOrientation.h"
+#include "PNLTransform.h"
 // For ostringstream
-#include  <sstream>
+#include <sstream>
 // For setw
-#include  <iomanip>
+#include <iomanip>
 #include "PNLInstTerm.h"
 
-  using namespace std;
-  using namespace naja::NL;
-  using namespace naja::NL;
+using namespace std;
+using namespace naja::NL;
+using naja::NL::NLLibrary;
+using naja::NL::PNLTransform;
+using std::cerr;
+using std::endl;
+//using std::string;
 
-  string toDefName ( string name )
-  {
-    if (name.empty()) return name;
-
-    if (name[0] == '<')             name.erase ( 0, 1 );
-    if (name[name.size()-1] == '>') name.erase ( name.size()-1 );
-    for ( size_t i=0 ; i<name.size() ; ++i ) {
-      switch ( name[i] ) {
-        case ':':
-        case '.': name[i] = '_'; break;
-      }
-    }
+std::string toDefName(string name) {
+  if (name.empty())
     return name;
-  }
 
-
-  // string  extractInstanceName ( const RoutingPad* rp )
-  // {
-  //   ostringstream name;
-
-  //   Occurrence occurrence = rp->getOccurrence();
-
-  //   name << getString(occurrence.getOwnerPNLDesign()->getName()) << '.';
-
-  //   if (not rp->getOccurrence().getPath().getHeadPath().isEmpty())
-  //     name << getString(rp->getOccurrence().getPath().getHeadPath().getName()) << ".";
-
-  //   name << "I." << getString(rp->getOccurrence().getPath().getTailInstance()->getName());
-
-  //   return toDefName(name.str());
-  // }
-
-
-#define  CHECK_STATUS_CBK(status,info)         if ((status) != 0) return driver->checkStatus(status,info);
-#define  CHECK_STATUS_DRV(status,info)         if ((status) != 0) return checkStatus(status,info);
-#define  RETURN_CHECK_STATUS_CBK(status,info)  return driver->checkStatus(status,info);
-#define  RETURN_CHECK_STATUS_DRV(status,info)  return checkStatus(status,info);
-
-
-  
-
-
-  int        DEFDumper::units_       = 1000;
-  PNLBox::Unit  DEFDumper::sliceHeight_ = 0;
-  PNLBox::Unit  DEFDumper::pitchWidth_  = 0;
-
-
-         int           DEFDumper::getUnits       () { return units_; }
-         int           DEFDumper::toDefUnits     ( PNLBox::Unit u ) { return u;/*(int)(round(PNLUnit::toMicrons(u)*units_));*/ }
-         PNLBox::Unit     DEFDumper::getSliceHeight () { return sliceHeight_; }
-         PNLBox::Unit     DEFDumper::getPitchWidth  () { return pitchWidth_; }; 
-  inline PNLDesign*         DEFDumper::getDesign        () { return cell_; }
-  inline uint32_t      DEFDumper::getFlags       () const { return flags_; }
-  inline int           DEFDumper::getStatus      () const { return status_; }
-  inline const string& DEFDumper::getDesignName  () const { return designName_; }
-
-
-  int  DEFDumper::toDefOrient ( PNLOrientation orient )
-  {
-    switch ( orient.getType().getType() ) {
-      case PNLOrientation::Type::R0: return 0; // N.
-      case PNLOrientation::Type::R90: return 1; // W.
-      case PNLOrientation::Type::R180: return 2; // S.
-      case PNLOrientation::Type::R270: return 3; // E.
-      case PNLOrientation::Type::MX: return 4; // FN.
-      case PNLOrientation::Type::MXR90: return 5; // FE.
-      case PNLOrientation::Type::MY: return 6; // FS.
-      case PNLOrientation::Type::MYR90: return 7; // FW.
-    }
-
-    return 0; // N
-  }
-
-
-  void  DEFDumper::toDefCoordinates ( PNLInstance* instance, PNLTransform transf, int& statusX, int& statusY, int& statusOrient )
-  {
-    PNLTransform inst_transf = instance->getTransform();
-    transf.applyOn( inst_transf );
-    statusX      = toDefUnits ( inst_transf.getOffset().getX() );
-    statusY      = toDefUnits ( inst_transf.getOffset().getY() );
-    statusOrient = toDefOrient( inst_transf.getOrientation() );
-
-    switch ( inst_transf.getOrientation().getType().getType() ) {
-      case PNLOrientation::Type::R0: break;
-      case PNLOrientation::Type::R90: break;
-      case PNLOrientation::Type::R180:
-        statusX -= toDefUnits( instance->getDesign()->getAbutmentBox().getWidth() );
-        statusY -= toDefUnits( instance->getDesign()->getAbutmentBox().getHeight() );
-        break;
-      case PNLOrientation::Type::R270: break;
-      case PNLOrientation::Type::MX:
-        statusX -= toDefUnits( instance->getDesign()->getAbutmentBox().getWidth() );
-        break;
-      case PNLOrientation::Type::MXR90:
-        break;
-      case PNLOrientation::Type::MY:
-        statusY -= toDefUnits( instance->getDesign()->getAbutmentBox().getHeight() );
-        break;
-      case PNLOrientation::Type::MYR90:
+  if (name[0] == '<')
+    name.erase(0, 1);
+  if (name[name.size() - 1] == '>')
+    name.erase(name.size() - 1);
+  for (size_t i = 0; i < name.size(); ++i) {
+    switch (name[i]) {
+      case ':':
+      case '.':
+        name[i] = '_';
         break;
     }
+  }
+  return name;
+}
 
+#define CHECK_STATUS_CBK(status, info) \
+  if ((status) != 0)                   \
+    return driver->checkStatus(status, info);
+#define CHECK_STATUS_DRV(status, info) \
+  if ((status) != 0)                   \
+    return checkStatus(status, info);
+#define RETURN_CHECK_STATUS_CBK(status, info) \
+  return driver->checkStatus(status, info);
+#define RETURN_CHECK_STATUS_DRV(status, info) return checkStatus(status, info);
+
+int DEFDumper::units_ = 1000;
+PNLBox::Unit DEFDumper::sliceHeight_ = 0;
+PNLBox::Unit DEFDumper::pitchWidth_ = 0;
+
+int DEFDumper::getUnits() {
+  return units_;
+}
+int DEFDumper::toDefUnits(PNLBox::Unit u) {
+  return u; /*(int)(round(PNLUnit::toMicrons(u)*units_));*/
+}
+PNLBox::Unit DEFDumper::getSliceHeight() {
+  return sliceHeight_;
+}
+PNLBox::Unit DEFDumper::getPitchWidth() {
+  return pitchWidth_;
+};
+inline PNLDesign* DEFDumper::getDesign() {
+  return cell_;
+}
+inline uint32_t DEFDumper::getFlags() const {
+  return flags_;
+}
+inline int DEFDumper::getStatus() const {
+  return status_;
+}
+inline const std::string& DEFDumper::getDesignName() const {
+  return designName_;
+}
+
+int DEFDumper::toDefOrient(PNLOrientation orient) {
+  switch (orient.getType().getType()) {
+    case PNLOrientation::Type::R0:
+      return 0;  // N.
+    case PNLOrientation::Type::R90:
+      return 1;  // W.
+    case PNLOrientation::Type::R180:
+      return 2;  // S.
+    case PNLOrientation::Type::R270:
+      return 3;  // E.
+    case PNLOrientation::Type::MX:
+      return 4;  // FN.
+    case PNLOrientation::Type::MXR90:
+      return 5;  // FE.
+    case PNLOrientation::Type::MY:
+      return 6;  // FS.
+    case PNLOrientation::Type::MYR90:
+      return 7;  // FW.
   }
 
+  return 0;  // N
+}
 
-  DEFDumper::DEFDumper ( PNLDesign* PNLDesign, const string& designName, FILE* defStream, uint32_t flags )
-    : cell_      (PNLDesign)
-    , designName_(designName)
-    , defStream_ (defStream)
-    , flags_     (flags)
-    , status_    (0)
-  {
-    //AllianceFramework* framework = AllianceFramework::get ();
-    //PNLDesignGauge*         cg        = framework->getDesignGauge();
+void DEFDumper::toDefCoordinates(PNLInstance* instance,
+                                 PNLTransform transf,
+                                 int& statusX,
+                                 int& statusY,
+                                 int& statusOrient) {
+  PNLTransform inst_transf = instance->getTransform();
+  transf.applyOn(inst_transf);
+  statusX = toDefUnits(inst_transf.getOffset().getX());
+  statusY = toDefUnits(inst_transf.getOffset().getY());
+  statusOrient = toDefOrient(inst_transf.getOrientation());
 
-    //sliceHeight_ = cg->getSliceHeight ();
-    //pitchWidth_  = cg->getPitch       ();
-  //units_       = PNLUnit::toGrid( PNLUnit::fromMicrons(1.0) );
-    units_       = 1000;
+  switch (inst_transf.getOrientation().getType().getType()) {
+    case PNLOrientation::Type::R0:
+      break;
+    case PNLOrientation::Type::R90:
+      break;
+    case PNLOrientation::Type::R180:
+      statusX -= toDefUnits(instance->getDesign()->getAbutmentBox().getWidth());
+      statusY -=
+          toDefUnits(instance->getDesign()->getAbutmentBox().getHeight());
+      break;
+    case PNLOrientation::Type::R270:
+      break;
+    case PNLOrientation::Type::MX:
+      statusX -= toDefUnits(instance->getDesign()->getAbutmentBox().getWidth());
+      break;
+    case PNLOrientation::Type::MXR90:
+      break;
+    case PNLOrientation::Type::MY:
+      statusY -=
+          toDefUnits(instance->getDesign()->getAbutmentBox().getHeight());
+      break;
+    case PNLOrientation::Type::MYR90:
+      break;
+  }
+}
 
-    status_ = defwInitCbk ( defStream_ );
-    if ( status_ != 0 ) return;
+DEFDumper::DEFDumper(PNLDesign* PNLDesign,
+                     const std::string& designName,
+                     FILE* defStream,
+                     uint32_t flags)
+    : cell_(PNLDesign),
+      designName_(designName),
+      defStream_(defStream),
+      flags_(flags),
+      status_(0) {
+  // AllianceFramework* framework = AllianceFramework::get ();
+  // PNLDesignGauge*         cg        = framework->getDesignGauge();
 
-    defwSetDesignCbk     ( designCbk_     );
-    defwSetDesignEndCbk  ( designEndCbk_  );
-    defwSetHistoryCbk    ( historyCbk_    );
-    defwSetVersionCbk    ( versionCbk_    );
-    defwSetDividerCbk    ( dividerCbk_    );
-    defwSetBusBitCbk     ( busBitCbk_     );
-    defwSetUnitsCbk      ( unitsCbk_      );
-    defwSetTechnologyCbk ( technologyCbk_ );
-    defwSetDieAreaCbk    ( dieAreaCbk_    );
-    //defwSetDesignEndCbk  ( gPNLDesignGridCbk_  );
-    defwSetRowCbk        ( rowCbk_        );
-    defwSetTrackCbk      ( trackCbk_      );
-    defwSetViaCbk        ( viaCbk_        );
-    defwSetPinCbk        ( pinCbk_        );
-    defwSetPinPropCbk    ( pinPropCbk_    );
-    defwSetComponentCbk  ( componentCbk_  );
-    defwSetNetCbk        ( netCbk_        );
-    defwSetSNetCbk       ( snetCbk_       );
-    defwSetExtCbk        ( extensionCbk_  );
-    defwSetGroupCbk      ( groupCbk_      );
-    defwSetPropDefCbk    ( propDefCbk_    );
-    defwSetRegionCbk     ( regionCbk_     );
-    defwSetScanchainCbk  ( scanchainCbk_  );
+  // sliceHeight_ = cg->getSliceHeight ();
+  // pitchWidth_  = cg->getPitch       ();
+  // units_       = PNLUnit::toGrid( PNLUnit::fromMicrons(1.0) );
+  units_ = 1000;
+
+  status_ = defwInitCbk(defStream_);
+  if (status_ != 0)
+    return;
+
+  defwSetDesignCbk(designCbk_);
+  defwSetDesignEndCbk(designEndCbk_);
+  defwSetHistoryCbk(historyCbk_);
+  defwSetVersionCbk(versionCbk_);
+  defwSetDividerCbk(dividerCbk_);
+  defwSetBusBitCbk(busBitCbk_);
+  defwSetUnitsCbk(unitsCbk_);
+  defwSetTechnologyCbk(technologyCbk_);
+  defwSetDieAreaCbk(dieAreaCbk_);
+  // defwSetDesignEndCbk  ( gPNLDesignGridCbk_  );
+  defwSetRowCbk(rowCbk_);
+  defwSetTrackCbk(trackCbk_);
+  defwSetViaCbk(viaCbk_);
+  defwSetPinCbk(pinCbk_);
+  defwSetPinPropCbk(pinPropCbk_);
+  defwSetComponentCbk(componentCbk_);
+  defwSetNetCbk(netCbk_);
+  defwSetSNetCbk(snetCbk_);
+  defwSetExtCbk(extensionCbk_);
+  defwSetGroupCbk(groupCbk_);
+  defwSetPropDefCbk(propDefCbk_);
+  defwSetRegionCbk(regionCbk_);
+  defwSetScanchainCbk(scanchainCbk_);
+}
+
+DEFDumper::~DEFDumper() {}
+
+int DEFDumper::write() {
+  // cell_->flattenPNLNets( PNLDesign::Flags::NoFlags );
+  return checkStatus(defwWrite(defStream_, designName_.c_str(), (void*)this),
+                     "write(): Problem while writing DEF.");
+}
+
+int DEFDumper::checkStatus(int status, std::string info) {
+  if ((status_ = status) != 0) {
+    defwPrintError(status_);
+    ostringstream message;
+    message << "DEFDumper::checkStatus(): Error occured while driving \""
+            << designName_ << "\".\n";
+    message << "        " << info;
+    cerr << message.str() << endl;
+  }
+  return status_;
+}
+
+int DEFDumper::versionCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+
+  defwNewLine();
+  defwAddComment("DEF generated by najaeda.");
+  defwNewLine();
+
+  return driver->checkStatus(defwVersion(5, 7),
+                             "_versionCnk(): Failed to write VERSION");
+}
+
+int DEFDumper::designCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+  defwNewLine();
+  return driver->checkStatus(defwDesignName(driver->getDesignName().c_str()),
+                             "designCbk_(): Failed to write DESIGN");
+}
+
+int DEFDumper::designEndCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+  return driver->checkStatus(defwEnd(),
+                             "designEndCbk_(): Failed to END design");
+}
+
+int DEFDumper::historyCbk_(defwCallbackType_e, defiUserData udata) {
+  // DEFDumper* driver = (DEFDumper*)udata;
+  return 0;
+}
+
+int DEFDumper::dividerCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+  defwNewLine();
+  return driver->checkStatus(defwDividerChar("."),
+                             "dividerCbk_(): Failed to drive DIVIDER");
+}
+
+int DEFDumper::busBitCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+  return driver->checkStatus(defwBusBitChars("()"),
+                             "busBitCbk_(): Failed to drive BUSBITCHAR");
+}
+
+int DEFDumper::unitsCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+  defwNewLine();
+  ostringstream info;
+  info << "units_Cnk(): Failed to drive UNITS (" << DEFDumper::getUnits()
+       << ")";
+  return driver->checkStatus(defwUnits(DEFDumper::getUnits()), info.str());
+}
+
+int DEFDumper::technologyCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+  return driver->checkStatus(
+      defwTechnology(
+          driver->getDesign()->getLibrary()->getName().getString().c_str()),
+      "_technologycbk(): Failed to drive TECHNOLOGY");
+}
+
+int DEFDumper::dieAreaCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+
+  PNLBox abutmentBox(driver->getDesign()->getAbutmentBox());
+  if (driver->getFlags() & DEFDumper::ExpandDieArea) {
+    abutmentBox.increase(DEFDumper::getPitchWidth(),
+                         DEFDumper::getPitchWidth());
   }
 
-
-  DEFDumper::~DEFDumper ()
-  { }
-
-
-  int  DEFDumper::write ()
-  {
-    //cell_->flattenPNLNets( PNLDesign::Flags::NoFlags );
-    return checkStatus( defwWrite(defStream_,designName_.c_str(), (void*)this )
-                      , "write(): Problem while writing DEF." );
+  if (not abutmentBox.isEmpty()) {
+    defwNewLine();
+    driver->checkStatus(defwDieArea((int)(toDefUnits(abutmentBox.getLeft())),
+                                    (int)(toDefUnits(abutmentBox.getBottom())),
+                                    (int)(toDefUnits(abutmentBox.getRight())),
+                                    (int)(toDefUnits(abutmentBox.getTop()))),
+                        "dieAreaCbk_(): Failed to write DIEAERA");
   }
+  return driver->getStatus();
+}
 
+int DEFDumper::gPNLDesignGridCbk_(defwCallbackType_e, defiUserData udata) {
+  // DEFDumper* driver = (DEFDumper*)udata;
 
-  int  DEFDumper::checkStatus ( int status, string info )
-  {
-    if ((status_=status) != 0) {
-      defwPrintError( status_ );
-      ostringstream message;
-      message << "DEFDumper::checkStatus(): Error occured while driving \"" << designName_ << "\".\n";
-      message << "        " << info;
-      cerr << message.str() << endl;
-    }
-    return status_;
-  }
+  return 0;
+}
 
+int DEFDumper::rowCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+  int status = 0;
+  PNLDesign* PNLDesign = driver->getDesign();
+  PNLBox abutmentBox(PNLDesign->getAbutmentBox());
 
-  int  DEFDumper::versionCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver = (DEFDumper*)udata;
-
-    defwNewLine ();
-    defwAddComment ( "DEF generated by najaeda." );
-    defwNewLine ();
-
-    return driver->checkStatus( defwVersion(5,7), "_versionCnk(): Failed to write VERSION" );
-  }
-
-
-  int  DEFDumper::designCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver = (DEFDumper*)udata;
-    defwNewLine ();
-    return driver->checkStatus( defwDesignName(driver->getDesignName().c_str())
-                              , "designCbk_(): Failed to write DESIGN" );
-  }
-
-
-  int  DEFDumper::designEndCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver = (DEFDumper*)udata;
-    return driver->checkStatus( defwEnd(), "designEndCbk_(): Failed to END design" );
-  }
-
-
-  int  DEFDumper::historyCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-  //DEFDumper* driver = (DEFDumper*)udata;
+  if (abutmentBox.isEmpty())
     return 0;
+
+  int origY = (int)(toDefUnits(abutmentBox.getBottom()));
+  int origX = (int)(toDefUnits(abutmentBox.getLeft()));
+  int stepY = (int)(toDefUnits(DEFDumper::getSliceHeight()));
+  int stepX = (int)(toDefUnits(DEFDumper::getPitchWidth()));
+  int rowsNb = abutmentBox.getHeight() / DEFDumper::getSliceHeight();
+  int columnsNb = abutmentBox.getWidth() / DEFDumper::getPitchWidth();
+
+  ostringstream comment;
+  comment << rowsNb << " rows of " << columnsNb << " pitchs.";
+  defwNewLine();
+  defwAddComment(comment.str().c_str());
+
+  for (int row = 0; row < rowsNb; ++row) {
+    ostringstream rowId;
+    rowId << "row_" << setw(5) << setfill('0') << row;
+
+    status = driver->checkStatus(
+        defwRowStr(rowId.str().c_str(), "core", origX, origY,
+                   (row % 2) ? "FN" : "N", columnsNb, 1, stepX, stepY),
+        "rowCbk_(): Failed to write ROW");
+
+    if (status != 0)
+      break;
+
+    origY += stepY;
   }
 
+  return 0;
+}
 
-  int  DEFDumper::dividerCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver = (DEFDumper*)udata;
-    defwNewLine ();
-    return driver->checkStatus( defwDividerChar("."), "dividerCbk_(): Failed to drive DIVIDER" );
+int DEFDumper::trackCbk_(defwCallbackType_e, defiUserData udata) {
+  return 0;
+}
+
+int DEFDumper::viaCbk_(defwCallbackType_e, defiUserData udata) {
+  // DEFDumper* driver = (DEFDumper*)udata;
+  return 0;
+}
+
+int DEFDumper::pinCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+  int status = 0;
+  PNLDesign* PNLDesign = driver->getDesign();
+  int pinsNb = 0;
+
+  for (PNLNet* iPNLNet : PNLDesign->getNets()) {
+    if (iPNLNet->isExternal())
+      ++pinsNb;
   }
 
+  status = defwStartPins(pinsNb);
+  if (status != 0)
+    return driver->checkStatus(status, "pinCbk_(): Failed to start PINS");
 
-  int  DEFDumper::busBitCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver = (DEFDumper*)udata;
-    return driver->checkStatus( defwBusBitChars("()")
-                              , "busBitCbk_(): Failed to drive BUSBITCHAR" );
-  }
+  for (PNLNet* iPNLNet : PNLDesign->getNets()) {
+    if (not iPNLNet->isExternal())
+      continue;
 
+    const char* PNLNetUse = NULL;
+    if (iPNLNet->isGND())
+      PNLNetUse = "GROUND";
+    if (iPNLNet->isVDD())
+      PNLNetUse = "POWER";
+    if (iPNLNet->isClock())
+      PNLNetUse = "CLOCK";
 
-  int  DEFDumper::unitsCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver = (DEFDumper*)udata;
-    defwNewLine ();
-    ostringstream info;
-    info << "units_Cnk(): Failed to drive UNITS (" << DEFDumper::getUnits() << ")";
-    return driver->checkStatus( defwUnits(DEFDumper::getUnits()), info.str() );
-  }
-
-
-  int  DEFDumper::technologyCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver = (DEFDumper*)udata;
-    return driver->checkStatus( defwTechnology( driver->getDesign()->getLibrary()->getName().getString().c_str() )
-                              , "_technologycbk(): Failed to drive TECHNOLOGY" );
-  }
-
-
-  int  DEFDumper::dieAreaCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver = (DEFDumper*)udata;
-
-    PNLBox abutmentBox ( driver->getDesign()->getAbutmentBox() );
-    if ( driver->getFlags() & DEFDumper::ExpandDieArea ) {
-      abutmentBox.increase ( DEFDumper::getPitchWidth(), DEFDumper::getPitchWidth() );
-    }
-
-    if ( not abutmentBox.isEmpty()) {
-      defwNewLine ();
-      driver->checkStatus
-        ( defwDieArea ( (int)( toDefUnits(abutmentBox.getLeft()) )
-                      , (int)( toDefUnits(abutmentBox.getBottom()) )
-                      , (int)( toDefUnits(abutmentBox.getRight()) )
-                      , (int)( toDefUnits(abutmentBox.getTop()) )
-                      )
-        , "dieAreaCbk_(): Failed to write DIEAERA"
+    status =
+        defwPin(iPNLNet->getName().getString().c_str()  // pin name.
+                ,
+                iPNLNet->getName().getString().c_str()  // PNLNet name (same).
+                ,
+                (PNLNetUse != NULL) ? 1 : 0  // special.
+                ,
+                (PNLNetUse != NULL) ? "INPUT" : "INOUT"  // direction.
+                ,
+                PNLNetUse  // use.
+                ,
+                NULL  // placement status.
+                ,
+                0  // status X.
+                ,
+                0  // status Y.
+                ,
+                -1  // orient.
+                ,
+                NULL  // layer.
+                ,
+                0, 0, 0, 0  // geometry.
         );
-    }
-    return driver->getStatus();
+    if (status != 0)
+      return driver->checkStatus(status, "pinCbk_(): Failed to write PIN");
   }
 
+  return driver->checkStatus(defwEndPins(), "pinCbk_(): Failed to close PINS");
+}
 
-  int  DEFDumper::gPNLDesignGridCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-  //DEFDumper* driver = (DEFDumper*)udata;
+int DEFDumper::pinPropCbk_(defwCallbackType_e, defiUserData udata) {
+  // DEFDumper* driver = (DEFDumper*)udata;
+  return 0;
+}
 
-    return 0;
-  }
+int DEFDumper::componentCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+  int status = 0;
+  PNLDesign* cell = driver->getDesign();
 
+  status = defwNewLine();
+  CHECK_STATUS_CBK(status, "componentCbk_(): Did not start properly");
 
-  int  DEFDumper::rowCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver      = (DEFDumper*)udata;
-    int        status      = 0;
-    PNLDesign*      PNLDesign        = driver->getDesign();
-    PNLBox        abutmentBox ( PNLDesign->getAbutmentBox() );
-
-    if (abutmentBox.isEmpty()) return 0;
-
-    int   origY     = (int)( toDefUnits(abutmentBox.getBottom()) );
-    int   origX     = (int)( toDefUnits(abutmentBox.getLeft()) );
-    int   stepY     = (int)( toDefUnits(DEFDumper::getSliceHeight()) );
-    int   stepX     = (int)( toDefUnits(DEFDumper::getPitchWidth ()) );
-    int   rowsNb    = abutmentBox.getHeight() / DEFDumper::getSliceHeight();
-    int   columnsNb = abutmentBox.getWidth () / DEFDumper::getPitchWidth ();
-
-    ostringstream comment;
-    comment << rowsNb << " rows of " << columnsNb << " pitchs.";
-    defwNewLine ();
-    defwAddComment ( comment.str().c_str() );
-
-    for ( int row=0 ; row < rowsNb ; ++row ) {
-      ostringstream rowId;
-      rowId << "row_" << setw(5) << setfill('0') << row;
-
-      status = driver->checkStatus
-        ( defwRowStr ( rowId.str().c_str()
-                     , "core"
-                     , origX
-                     , origY
-                     , (row%2) ? "FN" : "N"
-                     , columnsNb
-                     , 1
-                     , stepX
-                     , stepY
-                     )
-        , "rowCbk_(): Failed to write ROW"
-        );
-
-      if ( status != 0 ) break;
-
-      origY += stepY;
-    }
-
-    return 0;
-  }
-
-
-  int  DEFDumper::trackCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    /*DEFDumper* driver      = (DEFDumper*)udata;
-    PNLDesign*      PNLDesign        = driver->getDesign();
-    PNLBox        abutmentBox ( PNLDesign->getAbutmentBox() );
-
-    if (abutmentBox.isEmpty()) return 0;
-
-    //const vector<RoutingLayerGauge*>& rg
-     // = AllianceFramework::get()->getRoutingGauge()->getLayerGauges();
-
-    int status = 0;
-
-    const char* layerName[1];
-    for ( size_t ilayer=0 ; ilayer<rg.size() ; ++ilayer ) {
-      string name = getString ( rg[ilayer]->getLayer()->getName() );
-      layerName[0] = name.c_str();
-
-      const char* master;  // i.e. direction.
-      int         doCount;
-      int         doStart;
-      int         doStep = toDefUnits ( rg[ilayer]->getPitch() );
-
-      if ( rg[ilayer]->getDirection() == Constant::Horizontal ) {
-        master  = "X";
-        doStart = toDefUnits ( abutmentBox.getBottom() + rg[ilayer]->getOffset() );
-        doCount = toDefUnits ( abutmentBox.getHeight() ) / doStep;
-      } else {
-        master  = "Y";
-        doStart = toDefUnits ( abutmentBox.getLeft() + rg[ilayer]->getOffset() );
-        doCount = toDefUnits ( abutmentBox.getWidth() ) / doStep;
-      }
-      
-      status = defwTracks ( master, doStart, doCount, doStep, 1, layerName );
-      CHECK_STATUS_CBK(status,"trackCbk_(): Direction neither vertical nor horizontal.");
-    }
-
-    RETURN_CHECK_STATUS_CBK(status,"trackCbk_(): Did not complete properly");*/
-    return 0;
-  }
-
-
-  int  DEFDumper::viaCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-  //DEFDumper* driver = (DEFDumper*)udata;
-    return 0;
-  }
-
-
-  int  DEFDumper::pinCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver      = (DEFDumper*)udata;
-    int        status      = 0;
-    PNLDesign*      PNLDesign        = driver->getDesign();
-    int        pinsNb      = 0;
-
-    for (PNLNet* iPNLNet : PNLDesign->getNets() ) {
-      if ( iPNLNet->isExternal() ) ++pinsNb;
-    }
-
-    status = defwStartPins ( pinsNb );
-    if ( status != 0 )
-      return driver->checkStatus( status, "pinCbk_(): Failed to start PINS" );
-
-    for (PNLNet* iPNLNet : PNLDesign->getNets() ) {
-      if ( not iPNLNet->isExternal() ) continue;
-
-      const char* PNLNetUse = NULL;
-      if ( iPNLNet->isGND() ) PNLNetUse = "GROUND";
-      if ( iPNLNet->isVDD () ) PNLNetUse = "POWER";
-      if ( iPNLNet->isClock () ) PNLNetUse = "CLOCK";
-
-      status = defwPin ( iPNLNet->getName().getString().c_str() // pin name.
-                       , iPNLNet->getName().getString().c_str() // PNLNet name (same).
-                       , (PNLNetUse != NULL) ? 1 : 0              // special.
-                       , (PNLNetUse != NULL) ? "INPUT" : "INOUT"  // direction.
-                       , PNLNetUse                                // use.
-                       , NULL                                  // placement status.
-                       , 0                                     // status X.
-                       , 0                                     // status Y.
-                       , -1                                    // orient.
-                       , NULL                                  // layer.
-                       , 0, 0, 0, 0                            // geometry.
-                       );
-      if ( status != 0 ) return driver->checkStatus(status,"pinCbk_(): Failed to write PIN");
-    }
-
-    return driver->checkStatus ( defwEndPins(), "pinCbk_(): Failed to close PINS" );
-  }
-
-
-  int  DEFDumper::pinPropCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-  //DEFDumper* driver = (DEFDumper*)udata;
-    return 0;
-  }
-
-
-  int  DEFDumper::componentCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver      = (DEFDumper*)udata;
-    int        status      = 0;
-    PNLDesign*      cell        = driver->getDesign();
-
-    status = defwNewLine ();
-    CHECK_STATUS_CBK(status,"componentCbk_(): Did not start properly");
-
-    size_t numInstances = 0;
-    for (PNLInstance* instance : cell->getInstances()) {
-      // create a DFS visit of all instances under cell
-      std::stack<PNLInstance*> stack;
-      stack.push(instance);
-      while (!stack.empty()) {
-        PNLInstance* current = stack.top();
-        if (current->getModel()->isTerminalNetlist()) ++numInstances;
-        stack.pop();
-        for (PNLInstance* child : current->getModel()->getInstances()) {
-          stack.push(child);
-        }
+  size_t numInstances = 0;
+  for (PNLInstance* instance : cell->getInstances()) {
+    // create a DFS visit of all instances under cell
+    std::stack<PNLInstance*> stack;
+    stack.push(instance);
+    while (!stack.empty()) {
+      PNLInstance* current = stack.top();
+      if (current->getModel()->isTerminalNetlist())
+        ++numInstances;
+      stack.pop();
+      for (PNLInstance* child : current->getModel()->getInstances()) {
+        stack.push(child);
       }
     }
-
-    status = defwStartComponents ( numInstances );
-    CHECK_STATUS_CBK(status,"componentCbk_(): Cannot create instance count");
-    
-    
-    for (PNLInstance* instance : cell->getInstances()) {
-      std::vector<PNLInstance*> path;
-      path.push_back(instance);
-      // create a DFS visit of all instances under cell
-      std::stack<PNLInstance*> stack;
-      stack.push(instance);
-      while (!stack.empty()) {
-        PNLInstance* current = stack.top();
-        while (!path.empty() && path.back()->getModel() != current->getDesign()) {
-          path.pop_back();
-        }
-        path.push_back(current);
-        stack.pop();
-        for (PNLInstance* child : current->getModel()->getInstances()) {
-          stack.push(child);
-        }
-        std::string insname("");
-        for (PNLInstance* inst : path) {
-          insname = insname + inst->getName().getString() + " ";
-        }
-        const char* source       = NULL;
-        const char* statusS      = "UNPLACED";
-        int         statusX      = 0;
-        int         statusY      = 0;
-        int         statusOrient = 0;
-        PNLBox            instanceAb     = instance->getDesign()->getAbutmentBox();
-        PNLTransform instanceTransf;
-        for (PNLInstance* inst : path) {
-          instanceTransf = inst->getTransform().getTransform(instanceTransf);
-        }
-        instanceTransf.applyOn( instanceAb );
-        if (instance->getPlacementStatus() == PNLInstance::PlacementStatus::Placed) statusS = "PLACED";
-        if (instance->getPlacementStatus() == PNLInstance::PlacementStatus::Fixed ) statusS = "FIXED";
-        if (statusS[0] != 'U') {
-          toDefCoordinates( instance, instanceTransf, statusX, statusY, statusOrient );
-        }
-
-        status = defwComponent ( insname.c_str()
-                              , (instance)->getModel()->getName().getString().c_str()
-                              , 0             // numPNLNetNames (disabled).
-                              , NULL          // PNLNetNames (disabled).
-                              , NULL          // eeq (electrical equivalence).
-                              , NULL          // genName.
-                              , NULL          // genParameters.
-                              , source        // source (who has created it).
-                              , 0             // numForeigns.
-                              , NULL          // foreigns.
-                              , NULL          // foreignsX[].
-                              , NULL          // foreignsY[].
-                              , NULL          // foreignsOrient[].
-                              , statusS       // status (placement status).
-                              , statusX       // status X (disabled).
-                              , statusY       // status Y (disabled).
-                              , statusOrient  // status orientation (disabled).
-                              , 0.0           // weight (disabled).
-                              , NULL          // region (disabled).
-                              , 0, 0, 0, 0    // region coordinates.
-                              );
-        if ( status != 0 ) {
-          printf("Failed to write COMPONENT %s\n", insname.c_str());
-          return driver->checkStatus(status,"componentCbk_(): Failed to write COMPONENT");
-        }
-      }
-    }
-
-    
-
-    // for ( Occurrence occurrence : cell->getTerminalPNLNetlistInstanceOccurrences() ) {
-    // //for ( PNLInstance*   instance : PNLDesign->getInstances() ) {
-    //   PNLInstance*   instance     = static_cast<PNLInstance*>(occurrence.getEntity());
-    //   string      insname      = toDefName(occurrence.getCompactString());
-    //   const char* source       = NULL;
-    //   const char* statusS      = "UNPLACED";
-    //   int         statusX      = 0;
-    //   int         statusY      = 0;
-    //   int         statusOrient = 0;
-
-    //   PNLBox            instanceAb     = instance->getDesign()->getAbutmentBox();
-    //   PNLTransform instanceTransf = instance->getTransform();
-    //   occurrence.getPath().getTransform().applyOn( instanceTransf );
-    //   instanceTransf.applyOn( instanceAb );
-
-    //   //if (CatalogExtension::isFeed(instance->getDesign())) source = "DIST";
-
-    //   if (instance->getPlacementStatus() == PNLInstance::PlacementStatus::Placed) statusS = "PLACED";
-    //   if (instance->getPlacementStatus() == PNLInstance::PlacementStatus::Fixed ) statusS = "FIXED";
-    //   if (statusS[0] != 'U') {
-    //     toDefCoordinates( instance, occurrence.getPath().getTransform(), statusX, statusY, statusOrient );
-    //   }
-
-    //   status = defwComponent ( insname.c_str()
-    //                          , (instance)->getDesign()->getName().getString().c_str()
-    //                          , 0             // numPNLNetNames (disabled).
-    //                          , NULL          // PNLNetNames (disabled).
-    //                          , NULL          // eeq (electrical equivalence).
-    //                          , NULL          // genName.
-    //                          , NULL          // genParameters.
-    //                          , source        // source (who has created it).
-    //                          , 0             // numForeigns.
-    //                          , NULL          // foreigns.
-    //                          , NULL          // foreignsX[].
-    //                          , NULL          // foreignsY[].
-    //                          , NULL          // foreignsOrient[].
-    //                          , statusS       // status (placement status).
-    //                          , statusX       // status X (disabled).
-    //                          , statusY       // status Y (disabled).
-    //                          , statusOrient  // status orientation (disabled).
-    //                          , 0.0           // weight (disabled).
-    //                          , NULL          // region (disabled).
-    //                          , 0, 0, 0, 0    // region coordinates.
-    //                          );
-    //   if ( status != 0 ) return driver->checkStatus(status,"componentCbk_(): Failed to write COMPONENT");
-    // }
-    printf("End of component\n");
-    auto statusW = defwEndComponents();
-    printf("Status %d\n", driver->checkStatus ( statusW,"componentCbk_(): Failed to close COMPONENTS" ));
-    printf("checkStatus %s\n", driver->checkStatus ( statusW,"componentCbk_(): Failed to close COMPONENTS" ) == 0 ? "true" : "false");
-    return driver->checkStatus ( statusW,"componentCbk_(): Failed to close COMPONENTS" );
   }
 
+  status = defwStartComponents(numInstances);
+  CHECK_STATUS_CBK(status, "componentCbk_(): Cannot create instance count");
 
-  //int  DEFDumper::writeRouting ( PNLNet* PNLNet, bool special )
-  //{
-    /*int status = 0;
-    int i = 0;
-    for ( Component *component : PNLNet->getComponents() ) {
-      std::string layer = component->getLayer() ? getString(component->getLayer()->getName()) : "";
-      if (layer.size() >= 4 && layer.substr(layer.size() - 4) == ".pin")
-        continue;
-      if (layer.size() >= 6 && layer.substr(layer.size() - 6) == ".block")
-        continue;
+  for (PNLInstance* instance : cell->getInstances()) {
+    std::vector<PNLInstance*> path;
+    path.push_back(instance);
+    // create a DFS visit of all instances under cell
+    std::stack<PNLInstance*> stack;
+    stack.push(instance);
+    while (!stack.empty()) {
+      PNLInstance* current = stack.top();
+      while (!path.empty() && path.back()->getModel() != current->getDesign()) {
+        path.pop_back();
+      }
+      path.push_back(current);
+      stack.pop();
+      for (PNLInstance* child : current->getModel()->getInstances()) {
+        stack.push(child);
+      }
+      std::string insname("");
+      for (PNLInstance* inst : path) {
+        insname = insname + inst->getName().getString() + " ";
+      }
+      const char* source = NULL;
+      const char* statusS = "UNPLACED";
+      int statusX = 0;
+      int statusY = 0;
+      int statusOrient = 0;
+      PNLBox instanceAb = instance->getDesign()->getAbutmentBox();
+      PNLTransform instanceTransf;
+      for (PNLInstance* inst : path) {
+        instanceTransf = inst->getTransform().getTransform(instanceTransf);
+      }
+      instanceTransf.applyOn(instanceAb);
+      if (instance->getPlacementStatus() ==
+          PNLInstance::PlacementStatus::Placed)
+        statusS = "PLACED";
+      if (instance->getPlacementStatus() == PNLInstance::PlacementStatus::Fixed)
+        statusS = "FIXED";
+      if (statusS[0] != 'U') {
+        toDefCoordinates(instance, instanceTransf, statusX, statusY,
+                         statusOrient);
+      }
 
-      Segment *seg = dynamic_cast<Segment*>(component);
-      if (seg) {
-        status = (special ? defwSpecialNetPathStart : defwNetPathStart)((i++) ? "NEW" : "ROUTED");
-        if (special) {
-          status = defwSpecialNetPathLayer(layer.c_str());
-          status = defwSpecialNetPathWidth(int(toDefUnits(seg->getWidth())));
-        } else {
-          status = defwNetPathLayer(layer.c_str(), 0, nullptr);
-        }
-        double x[2], y[2];
-        x[0] = toDefUnits(seg->getSourceX());
-        y[0] = toDefUnits(seg->getSourceY());
-        x[1] = toDefUnits(seg->getTargetX());
-        y[1] = toDefUnits(seg->getTargetY());
-        status = (special ? defwSpecialNetPathPoint : defwNetPathPoint)(2, x, y);
-      } else {
-        Contact *contact = dynamic_cast<Contact*>(component);
-        if (contact) {
-          const ViaLayer *viaLayer = dynamic_cast<const ViaLayer*>(contact->getLayer());
-          if (viaLayer) {
-            status = (special ? defwSpecialNetPathStart : defwNetPathStart)((i++) ? "NEW" : "ROUTED");
-            if (special)
-              status = defwSpecialNetPathLayer(getString(viaLayer->getBottom()->getName()).c_str());
-            else
-              status = defwNetPathLayer(getString(viaLayer->getBottom()->getName()).c_str(), 0, nullptr);
-            double x[1], y[1];
-            x[0] = toDefUnits(contact->getX());
-            y[0] = toDefUnits(contact->getY());
-            status = (special ? defwSpecialNetPathPoint : defwNetPathPoint)(1, x, y);
-            status = (special ? defwSpecialNetPathVia : defwNetPathVia)(getString(viaLayer->getName()).c_str());
-          }
-        } else {
-          Rectilinear *rl = dynamic_cast<Rectilinear*>(component);
-          if (rl) {
-            PNLBox box = rl->getBoundingBox();
-            status = (special ? defwSpecialNetPathStart : defwNetPathStart)((i++) ? "NEW" : "ROUTED");
-            if (special)
-              status = defwSpecialNetPathLayer(layer.c_str());
-            else
-              status = defwNetPathLayer(layer.c_str(), 0, nullptr);
-            double x[1], y[1];
-            x[0] = toDefUnits(box.getLeft());
-            y[0] = toDefUnits(box.getBottom());
-            status = (special ? defwSpecialNetPathPoint : defwNetPathPoint)(1, x, y);
-            defwNetPathRect(0, 0, toDefUnits(box.getWidth()), toDefUnits(box.getHeight()));
-          }
-        }
+      status =
+          defwComponent(insname.c_str(),
+                        (instance)->getModel()->getName().getString().c_str(),
+                        0  // numPNLNetNames (disabled).
+                        ,
+                        NULL  // PNLNetNames (disabled).
+                        ,
+                        NULL  // eeq (electrical equivalence).
+                        ,
+                        NULL  // genName.
+                        ,
+                        NULL  // genParameters.
+                        ,
+                        source  // source (who has created it).
+                        ,
+                        0  // numForeigns.
+                        ,
+                        NULL  // foreigns.
+                        ,
+                        NULL  // foreignsX[].
+                        ,
+                        NULL  // foreignsY[].
+                        ,
+                        NULL  // foreignsOrient[].
+                        ,
+                        statusS  // status (placement status).
+                        ,
+                        statusX  // status X (disabled).
+                        ,
+                        statusY  // status Y (disabled).
+                        ,
+                        statusOrient  // status orientation (disabled).
+                        ,
+                        0.0  // weight (disabled).
+                        ,
+                        NULL  // region (disabled).
+                        ,
+                        0, 0, 0, 0  // region coordinates.
+          );
+      if (status != 0) {
+        printf("Failed to write COMPONENT %s\n", insname.c_str());
+        return driver->checkStatus(
+            status, "componentCbk_(): Failed to write COMPONENT");
       }
     }
-    if (i > 0)
-      status = (special ? defwSpecialNetPathEnd : defwNetPathEnd)();
-    return status;*/
-    //return 0;
-  //}
+  }
 
+  auto statusW = defwEndComponents();
+  return driver->checkStatus(statusW,
+                             "componentCbk_(): Failed to close COMPONENTS");
+}
 
-  int  DEFDumper::netCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    printf("Net callback\n");
-    DEFDumper* driver      = (DEFDumper*)udata;
-    int        status      = 0;
-    PNLDesign*      PNLDesign        = driver->getDesign();
-    int        PNLNetsNb      = 0;
-    //printf("num of nets %lu\n", PNLDesign->getNets().size());
-    for ( PNLNet* PNLNet : PNLDesign->getNets() ) {
-      
-      //printf("PNLNet %s\n", PNLNet->getName().getString().c_str());
-      if ( PNLNet->isSupply() or PNLNet->isClock() ) continue;
+int DEFDumper::netCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+  int status = 0;
+  PNLDesign* PNLDesign = driver->getDesign();
+  int PNLNetsNb = 0;
+  for (PNLNet* PNLNet : PNLDesign->getNets()) {
+    if (PNLNet->isSupply() or PNLNet->isClock())
+      continue;
+    ++PNLNetsNb;
+  }
+
+  status = defwStartNets(PNLNetsNb);
+  if (status != 0)
+    return driver->checkStatus(status, "netCbk_(): Failed to begin PNLNetS");
+
+  for (PNLNet* PNLNet : PNLDesign->getNets()) {
+    if (PNLNet->isSupply() or PNLNet->isClock())
+      continue;
+
+    std::string PNLNetName = PNLNet->getName().getString();
+    if (driver->getFlags() & DEFDumper::ProtectNetNames) {
+      size_t pos = std::string::npos;
+      if (PNLNetName[PNLNetName.size() - 1] == ')')
+        pos = PNLNetName.rfind('(');
+      if (pos == std::string::npos)
+        pos = PNLNetName.size();
+      PNLNetName.insert(pos, "_PNLNet");
+    }
+    PNLNetName = toDefName(PNLNetName);
+
+    status = defwNet(PNLNetName.c_str());
+    if (status != 0)
+      return driver->checkStatus(status, "netCbk_(): Failed to begin PNLNet");
+    PNLBitNet* bitNet = dynamic_cast<PNLBitNet*>(PNLNet);
+    assert(bitNet != NULL);
+    for (PNLInstTerm* term : bitNet->getInstTerms()) {
+      PNLInstance* instance = term->getInstance();
+      status = defwNetConnection(instance->getName().getString().c_str(),
+                                 term->getName().getString().c_str(), 0);
+      if (status != 0)
+        return driver->checkStatus(status,
+                                   "netCbk_(): Failed to write RoutingPad");
+    }
+
+    // status = writeRouting(PNLNet, false);
+    status = defwNetEndOneNet();
+    if (status != 0)
+      return driver->checkStatus(status, "_neCbk(): Failed to end PNLNet");
+  }
+
+  return driver->checkStatus(defwEndNets(), "_neCbk(): Failed to end PNLNetS");
+}
+
+int DEFDumper::snetCbk_(defwCallbackType_e, defiUserData udata) {
+  DEFDumper* driver = (DEFDumper*)udata;
+  int status = 0;
+  PNLDesign* PNLDesign = driver->getDesign();
+  int PNLNetsNb = 0;
+
+  for (PNLNet* iPNLNet : PNLDesign->getNets()) {
+    if (iPNLNet->isSupply() or iPNLNet->isClock()) {
       ++PNLNetsNb;
     }
-
-    status = defwStartNets ( PNLNetsNb );
-    if ( status != 0 )
-      return driver->checkStatus(status,"netCbk_(): Failed to begin PNLNetS");
-
-    for ( PNLNet* PNLNet : PNLDesign->getNets() ) {
-      if ( PNLNet->isSupply() or PNLNet->isClock() ) continue;
-
-      string PNLNetName = PNLNet->getName().getString();
-      if ( driver->getFlags() & DEFDumper::ProtectNetNames) {
-        size_t pos = string::npos;
-        if (PNLNetName[PNLNetName.size()-1] == ')') pos = PNLNetName.rfind('(');
-        if (pos == string::npos)              pos = PNLNetName.size();
-        PNLNetName.insert( pos, "_PNLNet" );
-      }
-      PNLNetName = toDefName( PNLNetName );
-
-      status = defwNet ( PNLNetName.c_str() );
-      if ( status != 0 ) return driver->checkStatus(status,"netCbk_(): Failed to begin PNLNet");
-
-      // for ( RoutingPad* rp : PNLNet->getRoutingPads() ) {
-      //   Plug *plug = dynamic_cast<Plug*>(rp->getPlugOccurrence().getEntity());
-      //   if (plug) {
-      //     status = defwNetConnection ( extractInstanceName(rp).c_str()
-      //                                , getString(plug->getMasterPNLNet()->getName()).c_str()
-      //                                , 0
-      //                                );
-      //   } else {
-      //     Pin *pin = dynamic_cast<Pin*>(rp->getPlugOccurrence().getEntity());
-      //     if (!pin)
-      //       throw Error("RP PlugOccurrence neither a plug nor a pin!");
-      //     // TODO: do we need to write something ?
-      //   }
-      //   if ( status != 0 ) return driver->checkStatus(status,"netCbk_(): Failed to write RoutingPad");
-      // }
-      PNLBitNet* bitNet = dynamic_cast<PNLBitNet*>(PNLNet);
-      assert(bitNet != NULL);
-      for ( PNLInstTerm* term : bitNet->getInstTerms() ) {
-        PNLInstance* instance = term->getInstance();
-        status = defwNetConnection ( instance->getName().getString().c_str()
-                                      , term->getName().getString().c_str()
-                                      , 0
-                                      );
-        if ( status != 0 ) return driver->checkStatus(status,"netCbk_(): Failed to write RoutingPad");
-      }
-
-      //status = writeRouting(PNLNet, false);
-      status = defwNetEndOneNet ();
-      if ( status != 0 ) return driver->checkStatus( status, "_neCbk(): Failed to end PNLNet" );
-    }
-
-    return driver->checkStatus ( defwEndNets(), "_neCbk(): Failed to end PNLNetS" );
   }
 
+  status = defwStartSpecialNets(PNLNetsNb);
+  if (status != 0)
+    return driver->checkStatus(status, "snetCbk_(): Failed to begin SPNLNetS");
 
-  int  DEFDumper::snetCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-    DEFDumper* driver      = (DEFDumper*)udata;
-    int        status      = 0;
-    PNLDesign*      PNLDesign        = driver->getDesign();
-    int        PNLNetsNb      = 0;
+  for (PNLNet* iPNLNet : PNLDesign->getNets()) {
+    const char* PNLNetUse = NULL;
+    if (iPNLNet->isGND())
+      PNLNetUse = "GROUND";
+    if (iPNLNet->isVDD())
+      PNLNetUse = "POWER";
+    if (iPNLNet->isClock())
+      PNLNetUse = "CLOCK";
+    if (PNLNetUse == NULL)
+      continue;
 
-    for (PNLNet* iPNLNet : PNLDesign->getNets() ) {
-      if ( iPNLNet->isSupply() or iPNLNet->isClock() ) {
-        ++PNLNetsNb;
-      }
-    }
+    status = defwSpecialNet(iPNLNet->getName().getString().c_str());
+    if (status != 0)
+      return driver->checkStatus(status, "snetCbk_(): Failed to write SPNLNet");
 
-    status = defwStartSpecialNets ( PNLNetsNb );
-    if ( status != 0 ) return driver->checkStatus(status,"snetCbk_(): Failed to begin SPNLNetS");
+    status = defwSpecialNetConnection(
+        "*", iPNLNet->getName().getString().c_str(), 0);
+    if (status != 0)
+      return driver->checkStatus(status,
+                                 "snetCbk_(): Failed to write CONNEXION");
 
-    for (PNLNet* iPNLNet : PNLDesign->getNets() ) {
-      const char* PNLNetUse = NULL;
-      if ( iPNLNet->isGND() ) PNLNetUse = "GROUND";
-      if ( iPNLNet->isVDD () ) PNLNetUse = "POWER";
-      if ( iPNLNet->isClock () ) PNLNetUse = "CLOCK";
-      if ( PNLNetUse == NULL ) continue;
+    status = defwSpecialNetUse(PNLNetUse);
+    if (status != 0)
+      return driver->checkStatus(status,
+                                 "_sPNLNetCnk(): Failed to write PNLNet USE");
 
-      status = defwSpecialNet ( iPNLNet->getName().getString().c_str() );
-      if ( status != 0 ) return driver->checkStatus(status,"snetCbk_(): Failed to write SPNLNet");
+    // status = writeRouting(*iPNLNet, true);
+    // if ( status != 0 ) return driver->checkStatus(status,"_sPNLNetCnk():
+    // Failed to write special wiring");
 
-      status = defwSpecialNetConnection ( "*"
-                                        , iPNLNet->getName().getString().c_str()
-                                        , 0
-                                        );
-      if ( status != 0 ) return driver->checkStatus(status,"snetCbk_(): Failed to write CONNEXION");
-
-      status = defwSpecialNetUse ( PNLNetUse );
-      if ( status != 0 ) return driver->checkStatus(status,"_sPNLNetCnk(): Failed to write PNLNet USE");
-
-      //status = writeRouting(*iPNLNet, true);
-      //if ( status != 0 ) return driver->checkStatus(status,"_sPNLNetCnk(): Failed to write special wiring");
-
-      status = defwSpecialNetEndOneNet ();
-      if ( status != 0 ) return driver->checkStatus(status,"_sPNLNetCnk(): Failed to end SPNLNet");
-    }
-
-    return driver->checkStatus( defwEndSpecialNets(), "_sPNLNetCnk(): Failed to end SPECIALPNLNetS" );
+    status = defwSpecialNetEndOneNet();
+    if (status != 0)
+      return driver->checkStatus(status,
+                                 "_sPNLNetCnk(): Failed to end SPNLNet");
   }
 
+  return driver->checkStatus(defwEndSpecialNets(),
+                             "_sPNLNetCnk(): Failed to end SPECIALPNLNetS");
+}
 
-  int  DEFDumper::extensionCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-  //DEFDumper* driver = (DEFDumper*)udata;
-    return 0;
+int DEFDumper::extensionCbk_(defwCallbackType_e, defiUserData udata) {
+  // DEFDumper* driver = (DEFDumper*)udata;
+  return 0;
+}
+
+int DEFDumper::groupCbk_(defwCallbackType_e, defiUserData udata) {
+  // DEFDumper* driver = (DEFDumper*)udata;
+  return 0;
+}
+
+int DEFDumper::propDefCbk_(defwCallbackType_e, defiUserData udata) {
+  // DEFDumper* driver = (DEFDumper*)udata;
+  return 0;
+}
+
+int DEFDumper::regionCbk_(defwCallbackType_e, defiUserData udata) {
+  // DEFDumper* driver = (DEFDumper*)udata;
+  return 0;
+}
+
+int DEFDumper::scanchainCbk_(defwCallbackType_e, defiUserData udata) {
+  // DEFDumper* driver = (DEFDumper*)udata;
+  return 0;
+}
+
+void DEFDumper::drive(PNLDesign* PNLDesign, uint32_t flags) {
+  FILE* defStream = NULL;
+  try {
+    std::string designName = PNLDesign->getName().getString() + "_export";
+    std::string path = "./" + designName + ".def";
+
+    defStream = fopen(path.c_str(), "w");
+    if (defStream == NULL)
+      throw "DEFDumper::drive(): Cannot open <%s>.", path.c_str();
+
+    unique_ptr<DEFDumper> driver(
+        new DEFDumper(PNLDesign, designName, defStream, flags));
+    driver->write();
+  } catch (...) {
+    if (defStream != NULL)
+      fclose(defStream);
+
+    throw;
   }
-
-
-  int  DEFDumper::groupCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-  //DEFDumper* driver = (DEFDumper*)udata;
-    return 0;
-  }
-
-
-  int  DEFDumper::propDefCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-  //DEFDumper* driver = (DEFDumper*)udata;
-    return 0;
-  }
-
-
-  int  DEFDumper::regionCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-  //DEFDumper* driver = (DEFDumper*)udata;
-    return 0;
-  }
-
-
-  int  DEFDumper::scanchainCbk_ ( defwCallbackType_e, defiUserData udata )
-  {
-  //DEFDumper* driver = (DEFDumper*)udata;
-    return 0;
-  }
-
-
-  void  DEFDumper::drive ( PNLDesign* PNLDesign, uint32_t flags )
-  {
-    FILE* defStream = NULL;
-    try {
-      string designName = PNLDesign->getName().getString() + "_export";
-      string path       = "./" + designName + ".def";
-
-      defStream = fopen ( path.c_str(), "w" );
-      if ( defStream == NULL )
-        throw "DEFDumper::drive(): Cannot open <%s>.",path.c_str();
-
-      unique_ptr<DEFDumper> driver ( new DEFDumper(PNLDesign,designName,defStream,flags) );
-      driver->write ();
-    }
-    catch ( ... ) {
-      if ( defStream != NULL ) fclose ( defStream );
-
-      throw;
-    }
-    fclose ( defStream );
-  }
-
-//namespace CRL {
-
-  using std::cerr;
-  using std::endl;
-  using std::string;
-  using naja::NL::NLLibrary;
-  using naja::NL::PNLTransform;
-  //using naja::UpdateSession;
-
-
-
-//}  // End of CRL namespace.
+  fclose(defStream);
+}
