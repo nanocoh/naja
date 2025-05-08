@@ -152,6 +152,6 @@ int main(int argc, char* argv[]) {
     }
   }
   naja::NL::LEFDumper::dump(lib);
-  DefExport::drive(design, DefExport::WithLEF);
+  DEFDumper::drive(design, DEFDumper::WithLEF);
   printf("Done\n");
 }

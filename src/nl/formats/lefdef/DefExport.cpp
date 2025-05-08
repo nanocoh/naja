@@ -3,31 +3,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include  <memory>
-#include  "lefwWriter.hpp"
-#include  "defwWriter.hpp"
-#include  "defwWriterCalls.hpp"
-// #include  "hurricane/Error.h"
-// #include  "hurricane/Warning.h"
-// #include  "hurricane/DataBase.h"
-// #include  "hurricane/Technology.h"
 #include  "PNLNet.h"
-//#include  "hurricane/PNLNetExternalComponents.h"
-// #include  "hurricane/RoutingPad.h"
-// #include  "hurricane/Horizontal.h"
-// #include  "hurricane/Vertical.h"
 #include  "PNLDesign.h"
 #include  "NLLibrary.h"
 #include "PNLOrientation.h"
-// #include  "hurricane/UpdateSession.h"
-// #include  "hurricane/ViaLayer.h"
-// #include  "hurricane/Rectilinear.h"
-
-// #include  "crlcore/Utilities.h"
-// #include  "crlcore/ToolBox.h"
-// #include  "crlcore/RoutingGauge.h"
-// #include  "crlcore/RoutingLayerGauge.h"
-// #include  "crlcore/AllianceFramework.h"
-// #include  "crlcore/PNLDesignGauge.h"
 #include  "LefExport.h"
 #include  "DefExport.h"
 #include "PNLTransform.h"
@@ -39,106 +18,9 @@
 #include  <iomanip>
 #include "PNLInstTerm.h"
 
-namespace {
-
   using namespace std;
   using namespace naja::NL;
   using namespace naja::NL;
-
-  class mstream : public std::ostream {
-    public:
-      enum StreamMasks { PassThrough   = 0x00000001
-                       , Verbose0      = 0x00000002
-                       , Verbose1      = 0x00000004
-                       , Verbose2      = 0x00000008
-                       , Info          = 0x00000010
-                       , Paranoid      = 0x00000020
-                       , Bug           = 0x00000040
-                       };
-    public:
-      static        void          enable          ( unsigned int mask );
-      static        void          disable         ( unsigned int mask );
-      inline                      mstream         ( unsigned int mask, std::ostream &s );
-      inline        bool          enabled         () const;
-      inline        unsigned int  getStreamMask   () const;
-      static inline unsigned int  getActiveMask   ();
-      inline        void          setStreamMask   ( unsigned int mask );
-      inline        void          unsetStreamMask ( unsigned int mask );
-    // Overload for formatted outputs.
-      template<typename T> inline mstream& operator<< ( T& t );
-      template<typename T> inline mstream& operator<< ( T* t );
-      template<typename T> inline mstream& operator<< ( const T& t );
-      template<typename T> inline mstream& operator<< ( const T* t );
-                           inline mstream& put        ( char c );
-                           inline mstream& flush      ();
-    // Overload for manipulators.
-                           inline mstream &operator<< ( std::ostream &(*pf)(std::ostream &) );
-
-    // Internal: Attributes.
-    private:
-      static unsigned int  _activeMask;
-             unsigned int  _streamMask;
-  };
-
-  inline               mstream::mstream        ( unsigned int mask, std::ostream& s ): std::ostream(s.rdbuf()) , _streamMask(mask) {}  
-  inline bool          mstream::enabled        () const { return (_streamMask & _activeMask); }
-  inline unsigned int  mstream::getStreamMask  () const { return  _streamMask; }
-  inline unsigned int  mstream::getActiveMask  ()       { return  _activeMask; }
-  inline void          mstream::setStreamMask  ( unsigned int mask ) { _streamMask |= mask; }
-  inline void          mstream::unsetStreamMask( unsigned int mask ) { _streamMask &= ~mask; }
-  inline mstream&      mstream::put            ( char c ) { if (enabled()) static_cast<std::ostream*>(this)->put(c); return *this; }  
-  inline mstream&      mstream::flush          () { if (enabled()) static_cast<std::ostream*>(this)->flush(); return *this; }  
-  inline mstream&      mstream::operator<<     ( std::ostream& (*pf)(std::ostream&) ) { if (enabled()) (*pf)(*this); return *this; }
-
-// For POD Types.
-  template<typename T>
-  inline mstream& mstream::operator<< ( T& t )
-  { if (enabled()) { *(static_cast<std::ostream*>(this)) << t; } return *this; };
-
-  template<typename T>
-  inline mstream& mstream::operator<< ( T* t )
-  { if (enabled()) { *(static_cast<std::ostream*>(this)) << t; } return *this; };
-
-  template<typename T>
-  inline mstream& mstream::operator<< ( const T& t )
-  { if (enabled()) { *(static_cast<std::ostream*>(this)) << t; } return *this; };
-
-  template<typename T>
-  inline mstream& mstream::operator<< ( const T* t )
-  { if (enabled()) { *(static_cast<std::ostream*>(this)) << t; } return *this; };
-
-// For STL Types.
-  inline mstream& operator<< ( mstream& o, const std::string& s )
-  { if (o.enabled()) { static_cast<std::ostream&>(o) << s; } return o; };
-
-// Specific non-member operator overload. Must be one for each type.
-#define  MSTREAM_V_SUPPORT(Type)                           \
-  inline mstream& operator<< ( mstream& o, Type t )        \
-  { if (o.enabled()) { static_cast<std::ostream&>(o) << t; } return o; }; \
-                                                           \
-  inline mstream& operator<< ( mstream& o, const Type t )  \
-  { if (o.enabled()) { static_cast<std::ostream&>(o) << t; } return o; };
-
-#define  MSTREAM_R_SUPPORT(Type)                           \
-  inline mstream& operator<< ( mstream& o, const Type& t ) \
-  { if (o.enabled()) { static_cast<std::ostream&>(o) << t; } return o; }; \
-                                                           \
-  inline mstream& operator<< ( mstream& o, Type& t )       \
-  { if (o.enabled()) { static_cast<std::ostream&>(o) << t; } return o; };
-
-#define  MSTREAM_P_SUPPORT(Type)                           \
-  inline mstream& operator<< ( mstream& o, const Type* t ) \
-  { if (o.enabled()) { static_cast<std::ostream&>(o) << t; } return o; }; \
-                                                           \
-  inline mstream& operator<< ( mstream& o, Type* t )       \
-  { if (o.enabled()) { static_cast<std::ostream&>(o) << t; } return o; };
-
-
-  unsigned int  mstream::_activeMask = 0;
-  extern mstream  cmess2;
-  mstream  cmess2    ( mstream::Verbose0, std::cout );
-  extern mstream  cmess1;
-  mstream  cmess1    ( mstream::Verbose0, std::cout );
 
   string toDefName ( string name )
   {
@@ -179,77 +61,25 @@ namespace {
 #define  RETURN_CHECK_STATUS_DRV(status,info)  return checkStatus(status,info);
 
 
-  class DefDriver {
-    public:
-      static void          drive            ( PNLDesign* PNLDesign, uint32_t flags );
-      static int           getUnits         ();
-      static int           toDefUnits       ( PNLBox::Unit );
-      static int           toDefOrient      ( PNLOrientation );
-      static void          toDefCoordinates ( PNLInstance*, PNLTransform, int& statusX, int& statusY, int& statusOrient );
-      static PNLBox::Unit     getSliceHeight   ();
-      static PNLBox::Unit     getPitchWidth    ();
-                          ~DefDriver        ();
-             int           write            ();
-    private:                                
-                           DefDriver        ( PNLDesign*, const string& designName, FILE*, uint32_t flags );
-      inline PNLDesign*         getDesign          ();
-      inline const string& getDesignName    () const;
-      inline uint32_t      getFlags         () const;
-      inline int           getStatus        () const;
-             int           checkStatus      ( int status, string info );
-      //static int           writeRouting     ( PNLNet*, bool special );
-    private:               
-      static int           _designCbk       ( defwCallbackType_e, defiUserData );
-      static int           _designEndCbk    ( defwCallbackType_e, defiUserData );
-      static int           _historyCbk      ( defwCallbackType_e, defiUserData );
-      static int           _versionCbk      ( defwCallbackType_e, defiUserData );
-      static int           _dividerCbk      ( defwCallbackType_e, defiUserData );
-      static int           _busBitCbk       ( defwCallbackType_e, defiUserData );
-      static int           _unitsCbk        ( defwCallbackType_e, defiUserData );
-      static int           _technologyCbk   ( defwCallbackType_e, defiUserData );
-      static int           _dieAreaCbk      ( defwCallbackType_e, defiUserData );
-      static int           _gPNLDesignGridCbk    ( defwCallbackType_e, defiUserData );
-      static int           _rowCbk          ( defwCallbackType_e, defiUserData );
-      static int           _trackCbk        ( defwCallbackType_e, defiUserData );
-      static int           _viaCbk          ( defwCallbackType_e, defiUserData );
-      static int           _pinCbk          ( defwCallbackType_e, defiUserData );
-      static int           _pinPropCbk      ( defwCallbackType_e, defiUserData );
-      static int           _componentCbk    ( defwCallbackType_e, defiUserData );
-      static int           _netCbk          ( defwCallbackType_e, defiUserData );
-      static int           _snetCbk         ( defwCallbackType_e, defiUserData );
-      static int           _extensionCbk    ( defwCallbackType_e, defiUserData );
-      static int           _groupCbk        ( defwCallbackType_e, defiUserData );
-      static int           _propDefCbk      ( defwCallbackType_e, defiUserData );
-      static int           _regionCbk       ( defwCallbackType_e, defiUserData );
-      static int           _scanchainCbk    ( defwCallbackType_e, defiUserData );
-    private:
-      static int           _units;
-      static PNLBox::Unit     _sliceHeight;
-      static PNLBox::Unit     _pitchWidth;
-             PNLDesign*         _cell;
-             string        _designName;
-             FILE*         _defStream;
-             uint32_t      _flags;
-             int           _status;
-  };
+  
 
 
-  int        DefDriver::_units       = 1000;
-  PNLBox::Unit  DefDriver::_sliceHeight = 0;
-  PNLBox::Unit  DefDriver::_pitchWidth  = 0;
+  int        DEFDumper::units_       = 1000;
+  PNLBox::Unit  DEFDumper::sliceHeight_ = 0;
+  PNLBox::Unit  DEFDumper::pitchWidth_  = 0;
 
 
-         int           DefDriver::getUnits       () { return _units; }
-         int           DefDriver::toDefUnits     ( PNLBox::Unit u ) { return u;/*(int)(round(PNLUnit::toMicrons(u)*_units));*/ }
-         PNLBox::Unit     DefDriver::getSliceHeight () { return _sliceHeight; }
-         PNLBox::Unit     DefDriver::getPitchWidth  () { return _pitchWidth; }; 
-  inline PNLDesign*         DefDriver::getDesign        () { return _cell; }
-  inline uint32_t      DefDriver::getFlags       () const { return _flags; }
-  inline int           DefDriver::getStatus      () const { return _status; }
-  inline const string& DefDriver::getDesignName  () const { return _designName; }
+         int           DEFDumper::getUnits       () { return units_; }
+         int           DEFDumper::toDefUnits     ( PNLBox::Unit u ) { return u;/*(int)(round(PNLUnit::toMicrons(u)*units_));*/ }
+         PNLBox::Unit     DEFDumper::getSliceHeight () { return sliceHeight_; }
+         PNLBox::Unit     DEFDumper::getPitchWidth  () { return pitchWidth_; }; 
+  inline PNLDesign*         DEFDumper::getDesign        () { return cell_; }
+  inline uint32_t      DEFDumper::getFlags       () const { return flags_; }
+  inline int           DEFDumper::getStatus      () const { return status_; }
+  inline const string& DEFDumper::getDesignName  () const { return designName_; }
 
 
-  int  DefDriver::toDefOrient ( PNLOrientation orient )
+  int  DEFDumper::toDefOrient ( PNLOrientation orient )
   {
     switch ( orient.getType().getType() ) {
       case PNLOrientation::Type::R0: return 0; // N.
@@ -266,7 +96,7 @@ namespace {
   }
 
 
-  void  DefDriver::toDefCoordinates ( PNLInstance* instance, PNLTransform transf, int& statusX, int& statusY, int& statusOrient )
+  void  DEFDumper::toDefCoordinates ( PNLInstance* instance, PNLTransform transf, int& statusX, int& statusY, int& statusOrient )
   {
     PNLTransform inst_transf = instance->getTransform();
     transf.applyOn( inst_transf );
@@ -297,78 +127,78 @@ namespace {
   }
 
 
-  DefDriver::DefDriver ( PNLDesign* PNLDesign, const string& designName, FILE* defStream, uint32_t flags )
-    : _cell      (PNLDesign)
-    , _designName(designName)
-    , _defStream (defStream)
-    , _flags     (flags)
-    , _status    (0)
+  DEFDumper::DEFDumper ( PNLDesign* PNLDesign, const string& designName, FILE* defStream, uint32_t flags )
+    : cell_      (PNLDesign)
+    , designName_(designName)
+    , defStream_ (defStream)
+    , flags_     (flags)
+    , status_    (0)
   {
     //AllianceFramework* framework = AllianceFramework::get ();
     //PNLDesignGauge*         cg        = framework->getDesignGauge();
 
-    //_sliceHeight = cg->getSliceHeight ();
-    //_pitchWidth  = cg->getPitch       ();
-  //_units       = PNLUnit::toGrid( PNLUnit::fromMicrons(1.0) );
-    _units       = 1000;
+    //sliceHeight_ = cg->getSliceHeight ();
+    //pitchWidth_  = cg->getPitch       ();
+  //units_       = PNLUnit::toGrid( PNLUnit::fromMicrons(1.0) );
+    units_       = 1000;
 
-    _status = defwInitCbk ( _defStream );
-    if ( _status != 0 ) return;
+    status_ = defwInitCbk ( defStream_ );
+    if ( status_ != 0 ) return;
 
-    defwSetDesignCbk     ( _designCbk     );
-    defwSetDesignEndCbk  ( _designEndCbk  );
-    defwSetHistoryCbk    ( _historyCbk    );
-    defwSetVersionCbk    ( _versionCbk    );
-    defwSetDividerCbk    ( _dividerCbk    );
-    defwSetBusBitCbk     ( _busBitCbk     );
-    defwSetUnitsCbk      ( _unitsCbk      );
-    defwSetTechnologyCbk ( _technologyCbk );
-    defwSetDieAreaCbk    ( _dieAreaCbk    );
-    defwSetDesignEndCbk  ( _gPNLDesignGridCbk  );
-    defwSetRowCbk        ( _rowCbk        );
-    defwSetTrackCbk      ( _trackCbk      );
-    defwSetViaCbk        ( _viaCbk        );
-    defwSetPinCbk        ( _pinCbk        );
-    defwSetPinPropCbk    ( _pinPropCbk    );
-    defwSetComponentCbk  ( _componentCbk  );
-    defwSetNetCbk        ( _netCbk        );
-    defwSetSNetCbk       ( _snetCbk       );
-    defwSetExtCbk        ( _extensionCbk  );
-    defwSetGroupCbk      ( _groupCbk      );
-    defwSetPropDefCbk    ( _propDefCbk    );
-    defwSetRegionCbk     ( _regionCbk     );
-    defwSetScanchainCbk  ( _scanchainCbk  );
+    defwSetDesignCbk     ( designCbk_     );
+    defwSetDesignEndCbk  ( designEndCbk_  );
+    defwSetHistoryCbk    ( historyCbk_    );
+    defwSetVersionCbk    ( versionCbk_    );
+    defwSetDividerCbk    ( dividerCbk_    );
+    defwSetBusBitCbk     ( busBitCbk_     );
+    defwSetUnitsCbk      ( unitsCbk_      );
+    defwSetTechnologyCbk ( technologyCbk_ );
+    defwSetDieAreaCbk    ( dieAreaCbk_    );
+    //defwSetDesignEndCbk  ( gPNLDesignGridCbk_  );
+    defwSetRowCbk        ( rowCbk_        );
+    defwSetTrackCbk      ( trackCbk_      );
+    defwSetViaCbk        ( viaCbk_        );
+    defwSetPinCbk        ( pinCbk_        );
+    defwSetPinPropCbk    ( pinPropCbk_    );
+    defwSetComponentCbk  ( componentCbk_  );
+    defwSetNetCbk        ( netCbk_        );
+    defwSetSNetCbk       ( snetCbk_       );
+    defwSetExtCbk        ( extensionCbk_  );
+    defwSetGroupCbk      ( groupCbk_      );
+    defwSetPropDefCbk    ( propDefCbk_    );
+    defwSetRegionCbk     ( regionCbk_     );
+    defwSetScanchainCbk  ( scanchainCbk_  );
   }
 
 
-  DefDriver::~DefDriver ()
+  DEFDumper::~DEFDumper ()
   { }
 
 
-  int  DefDriver::write ()
+  int  DEFDumper::write ()
   {
-    //_cell->flattenPNLNets( PNLDesign::Flags::NoFlags );
-    return checkStatus( defwWrite(_defStream,_designName.c_str(), (void*)this )
+    //cell_->flattenPNLNets( PNLDesign::Flags::NoFlags );
+    return checkStatus( defwWrite(defStream_,designName_.c_str(), (void*)this )
                       , "write(): Problem while writing DEF." );
   }
 
 
-  int  DefDriver::checkStatus ( int status, string info )
+  int  DEFDumper::checkStatus ( int status, string info )
   {
-    if ((_status=status) != 0) {
-      defwPrintError( _status );
+    if ((status_=status) != 0) {
+      defwPrintError( status_ );
       ostringstream message;
-      message << "DefDriver::checkStatus(): Error occured while driving \"" << _designName << "\".\n";
+      message << "DEFDumper::checkStatus(): Error occured while driving \"" << designName_ << "\".\n";
       message << "        " << info;
       cerr << message.str() << endl;
     }
-    return _status;
+    return status_;
   }
 
 
-  int  DefDriver::_versionCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::versionCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver = (DefDriver*)udata;
+    DEFDumper* driver = (DEFDumper*)udata;
 
     defwNewLine ();
     defwAddComment ( "DEF generated by najaeda." );
@@ -378,70 +208,70 @@ namespace {
   }
 
 
-  int  DefDriver::_designCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::designCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver = (DefDriver*)udata;
+    DEFDumper* driver = (DEFDumper*)udata;
     defwNewLine ();
     return driver->checkStatus( defwDesignName(driver->getDesignName().c_str())
-                              , "_designCbk(): Failed to write DESIGN" );
+                              , "designCbk_(): Failed to write DESIGN" );
   }
 
 
-  int  DefDriver::_designEndCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::designEndCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver = (DefDriver*)udata;
-    return driver->checkStatus( defwEnd(), "_designEndCbk(): Failed to END design" );
+    DEFDumper* driver = (DEFDumper*)udata;
+    return driver->checkStatus( defwEnd(), "designEndCbk_(): Failed to END design" );
   }
 
 
-  int  DefDriver::_historyCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::historyCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-  //DefDriver* driver = (DefDriver*)udata;
+  //DEFDumper* driver = (DEFDumper*)udata;
     return 0;
   }
 
 
-  int  DefDriver::_dividerCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::dividerCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver = (DefDriver*)udata;
+    DEFDumper* driver = (DEFDumper*)udata;
     defwNewLine ();
-    return driver->checkStatus( defwDividerChar("."), "_dividerCbk(): Failed to drive DIVIDER" );
+    return driver->checkStatus( defwDividerChar("."), "dividerCbk_(): Failed to drive DIVIDER" );
   }
 
 
-  int  DefDriver::_busBitCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::busBitCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver = (DefDriver*)udata;
+    DEFDumper* driver = (DEFDumper*)udata;
     return driver->checkStatus( defwBusBitChars("()")
-                              , "_busBitCbk(): Failed to drive BUSBITCHAR" );
+                              , "busBitCbk_(): Failed to drive BUSBITCHAR" );
   }
 
 
-  int  DefDriver::_unitsCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::unitsCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver = (DefDriver*)udata;
+    DEFDumper* driver = (DEFDumper*)udata;
     defwNewLine ();
     ostringstream info;
-    info << "_unitsCnk(): Failed to drive UNITS (" << DefDriver::getUnits() << ")";
-    return driver->checkStatus( defwUnits(DefDriver::getUnits()), info.str() );
+    info << "units_Cnk(): Failed to drive UNITS (" << DEFDumper::getUnits() << ")";
+    return driver->checkStatus( defwUnits(DEFDumper::getUnits()), info.str() );
   }
 
 
-  int  DefDriver::_technologyCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::technologyCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver = (DefDriver*)udata;
+    DEFDumper* driver = (DEFDumper*)udata;
     return driver->checkStatus( defwTechnology( driver->getDesign()->getLibrary()->getName().getString().c_str() )
                               , "_technologycbk(): Failed to drive TECHNOLOGY" );
   }
 
 
-  int  DefDriver::_dieAreaCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::dieAreaCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver = (DefDriver*)udata;
+    DEFDumper* driver = (DEFDumper*)udata;
 
     PNLBox abutmentBox ( driver->getDesign()->getAbutmentBox() );
-    if ( driver->getFlags() & DefExport::ExpandDieArea ) {
-      abutmentBox.increase ( DefDriver::getPitchWidth(), DefDriver::getPitchWidth() );
+    if ( driver->getFlags() & DEFDumper::ExpandDieArea ) {
+      abutmentBox.increase ( DEFDumper::getPitchWidth(), DEFDumper::getPitchWidth() );
     }
 
     if ( not abutmentBox.isEmpty()) {
@@ -452,24 +282,24 @@ namespace {
                       , (int)( toDefUnits(abutmentBox.getRight()) )
                       , (int)( toDefUnits(abutmentBox.getTop()) )
                       )
-        , "_dieAreaCbk(): Failed to write DIEAERA"
+        , "dieAreaCbk_(): Failed to write DIEAERA"
         );
     }
     return driver->getStatus();
   }
 
 
-  int  DefDriver::_gPNLDesignGridCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::gPNLDesignGridCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-  //DefDriver* driver = (DefDriver*)udata;
+  //DEFDumper* driver = (DEFDumper*)udata;
 
     return 0;
   }
 
 
-  int  DefDriver::_rowCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::rowCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver      = (DefDriver*)udata;
+    DEFDumper* driver      = (DEFDumper*)udata;
     int        status      = 0;
     PNLDesign*      PNLDesign        = driver->getDesign();
     PNLBox        abutmentBox ( PNLDesign->getAbutmentBox() );
@@ -478,10 +308,10 @@ namespace {
 
     int   origY     = (int)( toDefUnits(abutmentBox.getBottom()) );
     int   origX     = (int)( toDefUnits(abutmentBox.getLeft()) );
-    int   stepY     = (int)( toDefUnits(DefDriver::getSliceHeight()) );
-    int   stepX     = (int)( toDefUnits(DefDriver::getPitchWidth ()) );
-    int   rowsNb    = abutmentBox.getHeight() / DefDriver::getSliceHeight();
-    int   columnsNb = abutmentBox.getWidth () / DefDriver::getPitchWidth ();
+    int   stepY     = (int)( toDefUnits(DEFDumper::getSliceHeight()) );
+    int   stepX     = (int)( toDefUnits(DEFDumper::getPitchWidth ()) );
+    int   rowsNb    = abutmentBox.getHeight() / DEFDumper::getSliceHeight();
+    int   columnsNb = abutmentBox.getWidth () / DEFDumper::getPitchWidth ();
 
     ostringstream comment;
     comment << rowsNb << " rows of " << columnsNb << " pitchs.";
@@ -503,7 +333,7 @@ namespace {
                      , stepX
                      , stepY
                      )
-        , "_rowCbk(): Failed to write ROW"
+        , "rowCbk_(): Failed to write ROW"
         );
 
       if ( status != 0 ) break;
@@ -515,9 +345,9 @@ namespace {
   }
 
 
-  int  DefDriver::_trackCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::trackCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    /*DefDriver* driver      = (DefDriver*)udata;
+    /*DEFDumper* driver      = (DEFDumper*)udata;
     PNLDesign*      PNLDesign        = driver->getDesign();
     PNLBox        abutmentBox ( PNLDesign->getAbutmentBox() );
 
@@ -549,24 +379,24 @@ namespace {
       }
       
       status = defwTracks ( master, doStart, doCount, doStep, 1, layerName );
-      CHECK_STATUS_CBK(status,"_trackCbk(): Direction neither vertical nor horizontal.");
+      CHECK_STATUS_CBK(status,"trackCbk_(): Direction neither vertical nor horizontal.");
     }
 
-    RETURN_CHECK_STATUS_CBK(status,"_trackCbk(): Did not complete properly");*/
+    RETURN_CHECK_STATUS_CBK(status,"trackCbk_(): Did not complete properly");*/
     return 0;
   }
 
 
-  int  DefDriver::_viaCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::viaCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-  //DefDriver* driver = (DefDriver*)udata;
+  //DEFDumper* driver = (DEFDumper*)udata;
     return 0;
   }
 
 
-  int  DefDriver::_pinCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::pinCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver      = (DefDriver*)udata;
+    DEFDumper* driver      = (DEFDumper*)udata;
     int        status      = 0;
     PNLDesign*      PNLDesign        = driver->getDesign();
     int        pinsNb      = 0;
@@ -577,7 +407,7 @@ namespace {
 
     status = defwStartPins ( pinsNb );
     if ( status != 0 )
-      return driver->checkStatus( status, "_pinCbk(): Failed to start PINS" );
+      return driver->checkStatus( status, "pinCbk_(): Failed to start PINS" );
 
     for (PNLNet* iPNLNet : PNLDesign->getNets() ) {
       if ( not iPNLNet->isExternal() ) continue;
@@ -599,28 +429,28 @@ namespace {
                        , NULL                                  // layer.
                        , 0, 0, 0, 0                            // geometry.
                        );
-      if ( status != 0 ) return driver->checkStatus(status,"_pinCbk(): Failed to write PIN");
+      if ( status != 0 ) return driver->checkStatus(status,"pinCbk_(): Failed to write PIN");
     }
 
-    return driver->checkStatus ( defwEndPins(), "_pinCbk(): Failed to close PINS" );
+    return driver->checkStatus ( defwEndPins(), "pinCbk_(): Failed to close PINS" );
   }
 
 
-  int  DefDriver::_pinPropCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::pinPropCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-  //DefDriver* driver = (DefDriver*)udata;
+  //DEFDumper* driver = (DEFDumper*)udata;
     return 0;
   }
 
 
-  int  DefDriver::_componentCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::componentCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver      = (DefDriver*)udata;
+    DEFDumper* driver      = (DEFDumper*)udata;
     int        status      = 0;
     PNLDesign*      cell        = driver->getDesign();
 
     status = defwNewLine ();
-    CHECK_STATUS_CBK(status,"_componentCbk(): Did not start properly");
+    CHECK_STATUS_CBK(status,"componentCbk_(): Did not start properly");
 
     size_t numInstances = 0;
     for (PNLInstance* instance : cell->getInstances()) {
@@ -638,7 +468,7 @@ namespace {
     }
 
     status = defwStartComponents ( numInstances );
-    CHECK_STATUS_CBK(status,"_componentCbk(): Cannot create instance count");
+    CHECK_STATUS_CBK(status,"componentCbk_(): Cannot create instance count");
     
     
     for (PNLInstance* instance : cell->getInstances()) {
@@ -701,7 +531,7 @@ namespace {
                               );
         if ( status != 0 ) {
           printf("Failed to write COMPONENT %s\n", insname.c_str());
-          return driver->checkStatus(status,"_componentCbk(): Failed to write COMPONENT");
+          return driver->checkStatus(status,"componentCbk_(): Failed to write COMPONENT");
         }
       }
     }
@@ -752,17 +582,17 @@ namespace {
     //                          , NULL          // region (disabled).
     //                          , 0, 0, 0, 0    // region coordinates.
     //                          );
-    //   if ( status != 0 ) return driver->checkStatus(status,"_componentCbk(): Failed to write COMPONENT");
+    //   if ( status != 0 ) return driver->checkStatus(status,"componentCbk_(): Failed to write COMPONENT");
     // }
     printf("End of component\n");
     auto statusW = defwEndComponents();
-    printf("Status %d\n", driver->checkStatus ( statusW,"_componentCbk(): Failed to close COMPONENTS" ));
-    printf("checkStatus %s\n", driver->checkStatus ( statusW,"_componentCbk(): Failed to close COMPONENTS" ) == 0 ? "true" : "false");
-    return driver->checkStatus ( statusW,"_componentCbk(): Failed to close COMPONENTS" );
+    printf("Status %d\n", driver->checkStatus ( statusW,"componentCbk_(): Failed to close COMPONENTS" ));
+    printf("checkStatus %s\n", driver->checkStatus ( statusW,"componentCbk_(): Failed to close COMPONENTS" ) == 0 ? "true" : "false");
+    return driver->checkStatus ( statusW,"componentCbk_(): Failed to close COMPONENTS" );
   }
 
 
-  //int  DefDriver::writeRouting ( PNLNet* PNLNet, bool special )
+  //int  DEFDumper::writeRouting ( PNLNet* PNLNet, bool special )
   //{
     /*int status = 0;
     int i = 0;
@@ -829,10 +659,10 @@ namespace {
   //}
 
 
-  int  DefDriver::_netCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::netCbk_ ( defwCallbackType_e, defiUserData udata )
   {
     printf("Net callback\n");
-    DefDriver* driver      = (DefDriver*)udata;
+    DEFDumper* driver      = (DEFDumper*)udata;
     int        status      = 0;
     PNLDesign*      PNLDesign        = driver->getDesign();
     int        PNLNetsNb      = 0;
@@ -846,13 +676,13 @@ namespace {
 
     status = defwStartNets ( PNLNetsNb );
     if ( status != 0 )
-      return driver->checkStatus(status,"_netCbk(): Failed to begin PNLNetS");
+      return driver->checkStatus(status,"netCbk_(): Failed to begin PNLNetS");
 
     for ( PNLNet* PNLNet : PNLDesign->getNets() ) {
       if ( PNLNet->isSupply() or PNLNet->isClock() ) continue;
 
       string PNLNetName = PNLNet->getName().getString();
-      if ( driver->getFlags() & DefExport::ProtectNetNames) {
+      if ( driver->getFlags() & DEFDumper::ProtectNetNames) {
         size_t pos = string::npos;
         if (PNLNetName[PNLNetName.size()-1] == ')') pos = PNLNetName.rfind('(');
         if (pos == string::npos)              pos = PNLNetName.size();
@@ -861,7 +691,7 @@ namespace {
       PNLNetName = toDefName( PNLNetName );
 
       status = defwNet ( PNLNetName.c_str() );
-      if ( status != 0 ) return driver->checkStatus(status,"_netCbk(): Failed to begin PNLNet");
+      if ( status != 0 ) return driver->checkStatus(status,"netCbk_(): Failed to begin PNLNet");
 
       // for ( RoutingPad* rp : PNLNet->getRoutingPads() ) {
       //   Plug *plug = dynamic_cast<Plug*>(rp->getPlugOccurrence().getEntity());
@@ -876,7 +706,7 @@ namespace {
       //       throw Error("RP PlugOccurrence neither a plug nor a pin!");
       //     // TODO: do we need to write something ?
       //   }
-      //   if ( status != 0 ) return driver->checkStatus(status,"_netCbk(): Failed to write RoutingPad");
+      //   if ( status != 0 ) return driver->checkStatus(status,"netCbk_(): Failed to write RoutingPad");
       // }
       PNLBitNet* bitNet = dynamic_cast<PNLBitNet*>(PNLNet);
       assert(bitNet != NULL);
@@ -886,7 +716,7 @@ namespace {
                                       , term->getName().getString().c_str()
                                       , 0
                                       );
-        if ( status != 0 ) return driver->checkStatus(status,"_netCbk(): Failed to write RoutingPad");
+        if ( status != 0 ) return driver->checkStatus(status,"netCbk_(): Failed to write RoutingPad");
       }
 
       //status = writeRouting(PNLNet, false);
@@ -898,9 +728,9 @@ namespace {
   }
 
 
-  int  DefDriver::_snetCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::snetCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-    DefDriver* driver      = (DefDriver*)udata;
+    DEFDumper* driver      = (DEFDumper*)udata;
     int        status      = 0;
     PNLDesign*      PNLDesign        = driver->getDesign();
     int        PNLNetsNb      = 0;
@@ -912,7 +742,7 @@ namespace {
     }
 
     status = defwStartSpecialNets ( PNLNetsNb );
-    if ( status != 0 ) return driver->checkStatus(status,"_snetCbk(): Failed to begin SPNLNetS");
+    if ( status != 0 ) return driver->checkStatus(status,"snetCbk_(): Failed to begin SPNLNetS");
 
     for (PNLNet* iPNLNet : PNLDesign->getNets() ) {
       const char* PNLNetUse = NULL;
@@ -922,13 +752,13 @@ namespace {
       if ( PNLNetUse == NULL ) continue;
 
       status = defwSpecialNet ( iPNLNet->getName().getString().c_str() );
-      if ( status != 0 ) return driver->checkStatus(status,"_snetCbk(): Failed to write SPNLNet");
+      if ( status != 0 ) return driver->checkStatus(status,"snetCbk_(): Failed to write SPNLNet");
 
       status = defwSpecialNetConnection ( "*"
                                         , iPNLNet->getName().getString().c_str()
                                         , 0
                                         );
-      if ( status != 0 ) return driver->checkStatus(status,"_snetCbk(): Failed to write CONNEXION");
+      if ( status != 0 ) return driver->checkStatus(status,"snetCbk_(): Failed to write CONNEXION");
 
       status = defwSpecialNetUse ( PNLNetUse );
       if ( status != 0 ) return driver->checkStatus(status,"_sPNLNetCnk(): Failed to write PNLNet USE");
@@ -944,55 +774,53 @@ namespace {
   }
 
 
-  int  DefDriver::_extensionCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::extensionCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-  //DefDriver* driver = (DefDriver*)udata;
+  //DEFDumper* driver = (DEFDumper*)udata;
     return 0;
   }
 
 
-  int  DefDriver::_groupCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::groupCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-  //DefDriver* driver = (DefDriver*)udata;
+  //DEFDumper* driver = (DEFDumper*)udata;
     return 0;
   }
 
 
-  int  DefDriver::_propDefCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::propDefCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-  //DefDriver* driver = (DefDriver*)udata;
+  //DEFDumper* driver = (DEFDumper*)udata;
     return 0;
   }
 
 
-  int  DefDriver::_regionCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::regionCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-  //DefDriver* driver = (DefDriver*)udata;
+  //DEFDumper* driver = (DEFDumper*)udata;
     return 0;
   }
 
 
-  int  DefDriver::_scanchainCbk ( defwCallbackType_e, defiUserData udata )
+  int  DEFDumper::scanchainCbk_ ( defwCallbackType_e, defiUserData udata )
   {
-  //DefDriver* driver = (DefDriver*)udata;
+  //DEFDumper* driver = (DEFDumper*)udata;
     return 0;
   }
 
 
-  void  DefDriver::drive ( PNLDesign* PNLDesign, uint32_t flags )
+  void  DEFDumper::drive ( PNLDesign* PNLDesign, uint32_t flags )
   {
     FILE* defStream = NULL;
     try {
       string designName = PNLDesign->getName().getString() + "_export";
       string path       = "./" + designName + ".def";
 
-      cmess1 << "  o  Export DEF: <" << path << ">" << endl;
-
       defStream = fopen ( path.c_str(), "w" );
       if ( defStream == NULL )
-        throw "DefDriver::drive(): Cannot open <%s>.",path.c_str();
+        throw "DEFDumper::drive(): Cannot open <%s>.",path.c_str();
 
-      unique_ptr<DefDriver> driver ( new DefDriver(PNLDesign,designName,defStream,flags) );
+      unique_ptr<DEFDumper> driver ( new DEFDumper(PNLDesign,designName,defStream,flags) );
       driver->write ();
     }
     catch ( ... ) {
@@ -1003,9 +831,6 @@ namespace {
     fclose ( defStream );
   }
 
-
-} // End of anonymous namespace.
-
 //namespace CRL {
 
   using std::cerr;
@@ -1015,11 +840,6 @@ namespace {
   using naja::NL::PNLTransform;
   //using naja::UpdateSession;
 
-
-  void  DefExport::drive ( PNLDesign* PNLDesign, uint32_t flags )
-  {
-    DefDriver::drive ( PNLDesign, flags );
-  }
 
 
 //}  // End of CRL namespace.
