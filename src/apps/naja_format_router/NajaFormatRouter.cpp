@@ -140,7 +140,7 @@ int main(int argc, char* argv[]) {
     }
   }
   
-  naja::NL::PNLDesign* design = DefImport::load("./file.def", DefImport::FitAbOnDesigns, lib->getDB());
+  naja::NL::PNLDesign* design = DEFConstructor::load("./file.def", DEFConstructor::FitAbOnDesigns, lib->getDB());
   for (auto instance : design->getInstances()) {
     printf("instance: %s\n", instance->getName().getString().c_str());
   }
