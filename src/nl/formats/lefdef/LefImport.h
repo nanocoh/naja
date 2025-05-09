@@ -24,7 +24,6 @@ class LEFConstructor {
  public:
   static void setMergeLibrary(NLLibrary*);
   static void setGdsForeignDirectory(string);
-  static void reset();
   static NLLibrary* parse(string file);
   LEFConstructor(string file, string libraryName);
   ~LEFConstructor();
@@ -48,9 +47,6 @@ class LEFConstructor {
   inline void setPNLDesign(PNLDesign*);
   inline PNLNet* getNet() const;
   inline void setPNLNet(PNLNet*);
-  static void setCoreSite(PNLBox::Unit x, PNLBox::Unit y);
-  static PNLBox::Unit getCoreSiteX();
-  static PNLBox::Unit getCoreSiteY();
   inline PNLBox::Unit getMinTerminalWidth() const;
   inline double getUnitsMicrons() const;
   inline void setUnitsMicrons(double);
@@ -59,12 +55,6 @@ class LEFConstructor {
   inline void pushError(const string&);
   int flushErrors();
   inline void clearErrors();
-  inline int getNthMetal() const;
-  inline void incNthMetal();
-  inline int getNthCut() const;
-  inline void incNthCut();
-  inline int getNthRouting() const;
-  inline void incNthRouting();
   inline void addPinComponent(string name, PNLTerm*);
   inline void clearPinComponents();
   naja::NL::NLDB* getDB() { return db_; }
@@ -110,14 +100,7 @@ class LEFConstructor {
   double unitsMicrons_;
   PNLBox::Unit oneGrid_;
   map<string, vector<PNLTerm*> > pinComponents_;
-  vector<string> unmatchedLayers_;
   vector<string> errors_;
-  int nthMetal_;
-  int nthCut_;
-  int nthRouting_;
-  PNLBox::Unit minTerminalWidth_;
-  static PNLBox::Unit coreSiteX_;
-  static PNLBox::Unit coreSiteY_;
 };
 
 }  // namespace NL

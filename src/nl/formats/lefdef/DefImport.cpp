@@ -181,15 +181,12 @@ PNLDesign* DEFConstructor::getLefPNLDesign(string name) {
   //     lefRootNLLibrary_ = rootNLLibrary->getLibrary( "LEF" );
   //   }
   // }
-  printf("getLefPNLDesign\n");
   NLLibrary* rootNLLibrary = db_->getLibrary(NLName("LIB1"));
   lefRootNLLibrary_ = db_->getLibrary(NLName("LEF"));
   assert(lefRootNLLibrary_ != nullptr);
   PNLDesign* masterPNLDesign = NULL;
   if (lefRootNLLibrary_) {
-    printf("getLefPNLDesign here\n");
     for (NLLibrary* library : lefRootNLLibrary_->getLibraries()) {
-      printf("library %s\n", library->getName().getString().c_str());
       masterPNLDesign = library->getPNLDesign(NLName(name));
       if (masterPNLDesign)
         break;
@@ -377,7 +374,6 @@ int DEFConstructor::dieAreaCbk_(defrCallbackType_e c,
 int DEFConstructor::viaCbk_(defrCallbackType_e c,
                             defiVia* via,
                             defiUserData ud) {
-  printf("via cb\n");
   DEFConstructor* parser = (DEFConstructor*)ud;
   string viaName = via->name();
 
@@ -486,7 +482,6 @@ int DEFConstructor::componentCbk_(defrCallbackType_e c,
                         fromDefUnits(component->placementY()),
                         fromDefOrientation(component->placementOrient()));
   }
-  printf("component %s %s\n", componentId.c_str(), componentName.c_str());
   PNLInstance* instance = PNLInstance::create(
       parser->getPNLDesign(), masterPNLDesign, NLName(componentId));
   // , placement
@@ -517,7 +512,6 @@ int DEFConstructor::componentEndCbk_(defrCallbackType_e c,
 int DEFConstructor::netCbk_(defrCallbackType_e c,
                             defiNet* net,
                             lefiUserData ud) {
-  printf("netCbk_\n");
   static size_t netCount = 0;
 
   DEFConstructor* parser = (DEFConstructor*)ud;
@@ -587,9 +581,6 @@ int DEFConstructor::netCbk_(defrCallbackType_e c,
       parser->pushError( message.str() );
       continue;
     }*/
-    printf("set %s(%s) to net %s\n", pinName.c_str(),
-           instance->getName().getString().c_str(),
-           hnet->getName().getString().c_str());
     assert(instance->getInstTerm(NLName(pinName)) != NULL);
     instance->getInstTerm(NLName(pinName))->setNet(hnet);
   }
@@ -600,7 +591,6 @@ int DEFConstructor::netCbk_(defrCallbackType_e c,
 int DEFConstructor::snetCbk_(defrCallbackType_e c,
                              defiNet* net,
                              lefiUserData ud) {
-  printf("snetCbk_\n");
   static size_t netCount = 0;
 
   DEFConstructor* parser = (DEFConstructor*)ud;
@@ -677,7 +667,6 @@ int DEFConstructor::snetCbk_(defrCallbackType_e c,
 }
 
 int DEFConstructor::netEndCbk_(defrCallbackType_e c, void*, lefiUserData ud) {
-  printf("end net cb\n");
   DEFConstructor* parser = (DEFConstructor*)ud;
   // if (tty::enabled()) cmess2 << endl;
   return parser->flushErrors();

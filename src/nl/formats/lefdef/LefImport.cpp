@@ -30,9 +30,6 @@ using std::string;
 using namespace std;
 using namespace naja::NL;
 
-inline PNLBox::Unit LEFConstructor::getMinTerminalWidth() const {
-  return minTerminalWidth_;
-}
 inline string LEFConstructor::getLibraryName() const {
   return libraryName_;
 }
@@ -83,34 +80,6 @@ inline double LEFConstructor::getUnitsMicrons() const {
 inline void LEFConstructor::setUnitsMicrons(double precision) {
   unitsMicrons_ = precision;
 }
-inline int LEFConstructor::getNthMetal() const {
-  return nthMetal_;
-}
-inline void LEFConstructor::incNthMetal() {
-  ++nthMetal_;
-}
-inline int LEFConstructor::getNthCut() const {
-  return nthCut_;
-}
-inline void LEFConstructor::incNthCut() {
-  ++nthCut_;
-}
-inline int LEFConstructor::getNthRouting() const {
-  return nthRouting_;
-}
-inline void LEFConstructor::incNthRouting() {
-  ++nthRouting_;
-}
-inline void LEFConstructor::setCoreSite(PNLBox::Unit x, PNLBox::Unit y) {
-  coreSiteX_ = x;
-  coreSiteY_ = y;
-}
-inline PNLBox::Unit LEFConstructor::getCoreSiteX() {
-  return coreSiteX_;
-}
-inline PNLBox::Unit LEFConstructor::getCoreSiteY() {
-  return coreSiteY_;
-}
 inline bool LEFConstructor::hasErrors() const {
   return not errors_.empty();
 }
@@ -132,8 +101,6 @@ inline void LEFConstructor::clearPinComponents() {
 
 string LEFConstructor::gdsForeignDirectory_ = "";
 NLLibrary* LEFConstructor::mergeNLLibrary_ = nullptr;
-PNLBox::Unit LEFConstructor::coreSiteX_ = 0;
-PNLBox::Unit LEFConstructor::coreSiteY_ = 0;
 
 void LEFConstructor::setMergeLibrary(NLLibrary* library) {
   mergeNLLibrary_ = library;
@@ -141,19 +108,6 @@ void LEFConstructor::setMergeLibrary(NLLibrary* library) {
 
 void LEFConstructor::setGdsForeignDirectory(string path) {
   gdsForeignDirectory_ = path;
-}
-
-void LEFConstructor::reset() {
-  coreSiteX_ = 0;
-  coreSiteY_ = 0;
-}
-
-bool LEFConstructor::isUnmatchedLayer(string layerName) {
-  for (string layer : unmatchedLayers_) {
-    if (layer == layerName)
-      return true;
-  }
-  return false;
 }
 
 LEFConstructor::LEFConstructor(string file, string libraryName)
@@ -168,11 +122,7 @@ LEFConstructor::LEFConstructor(string file, string libraryName)
       net_(nullptr),
       busBits_("()"),
       unitsMicrons_(0.01),
-      unmatchedLayers_(),
-      errors_(),
-      nthMetal_(0),
-      nthCut_(0),
-      nthRouting_(0) {
+      errors_() {
   lefrSetLogFunction(logFunction_);
   lefrInit();
   lefrSetUnitsCbk(unitsCbk_);
