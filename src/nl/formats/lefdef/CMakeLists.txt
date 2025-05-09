@@ -3,18 +3,18 @@
 # SPDX-License-Identifier: Apache-2.0
 
 set(SOURCES
-  LefImport.cpp
-  LefExport.cpp
-  DefImport.cpp
-  DefExport.cpp
+  LEFConstructor.cpp
+  LEFDumper.cpp
+  DEFConstructor.cpp
+  DEFDumper.cpp
 )
 
 #In the future provide a header exposing only simple parsing interface
 SET(HEADERS
-  LefImport.h
-  LefExport.h
-  DefImport.h
-  DefExport.h
+  LEFConstructor.h
+  LEFDumper.h
+  DEFConstructor.h
+  DEFDumper.h
 )
 
 add_library(naja_lefdef STATIC ${SOURCES})
