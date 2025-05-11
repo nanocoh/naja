@@ -64,7 +64,7 @@ int DEFDumper::getUnits() {
   return units_;
 }
 int DEFDumper::toDefUnits(PNLBox::Unit u) {
-  return u; /*(int)(round(PNLUnit::toMicrons(u)*units_));*/
+  return u;
 }
 PNLBox::Unit DEFDumper::getSliceHeight() {
   return sliceHeight_;
@@ -636,27 +636,22 @@ int DEFDumper::snetCbk_(defwCallbackType_e, defiUserData udata) {
 }
 
 int DEFDumper::extensionCbk_(defwCallbackType_e, defiUserData udata) {
-  // DEFDumper* driver = (DEFDumper*)udata;
   return 0;
 }
 
 int DEFDumper::groupCbk_(defwCallbackType_e, defiUserData udata) {
-  // DEFDumper* driver = (DEFDumper*)udata;
   return 0;
 }
 
 int DEFDumper::propDefCbk_(defwCallbackType_e, defiUserData udata) {
-  // DEFDumper* driver = (DEFDumper*)udata;
   return 0;
 }
 
 int DEFDumper::regionCbk_(defwCallbackType_e, defiUserData udata) {
-  // DEFDumper* driver = (DEFDumper*)udata;
   return 0;
 }
 
 int DEFDumper::scanchainCbk_(defwCallbackType_e, defiUserData udata) {
-  // DEFDumper* driver = (DEFDumper*)udata;
   return 0;
 }
 

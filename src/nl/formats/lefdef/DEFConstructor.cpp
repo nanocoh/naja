@@ -75,24 +75,16 @@ DEFConstructor::DEFConstructor(
   defrSetNetEndCbk(netEndCbk_);
   defrSetSNetCbk(snetCbk_);
   defrSetPathCbk(pathCbk_);
-
-  /*if (DataBase::getDB()->getTechnology()->getName() == "Sky130") {
-    cmess1 << "     - Enabling SkyWater 130nm harness hacks." << endl;
-    flags_ |= Sky130;
-  }*/
 }
 
 DEFConstructor::~DEFConstructor() {
   defrReset();
 }
-
-// AllianceFramework* DEFConstructor::getFramework             () { return
-// _framework; }
 inline void DEFConstructor::setUnits(double units) {
   defUnits_ = 1 / units;
 }
 inline PNLBox::Unit DEFConstructor::fromDefUnits(int u) {
-  return u; /*PNLUnit::fromPhysical(defUnits_*(double)u,PNLUnit::UnitPower::Micro);*/
+  return u; 
 }
 inline bool DEFConstructor::isSky130() const {
   return flags_ & Sky130;
@@ -106,8 +98,6 @@ inline unsigned int DEFConstructor::getFlags() const {
 inline string DEFConstructor::getBusBits() const {
   return busBits_;
 }
-// inline AllianceNLLibrary*   DEFConstructor::getLibrary               () {
-// return library_; }
 inline PNLDesign* DEFConstructor::getPNLDesign() {
   return cell_;
 }
@@ -192,11 +182,6 @@ PNLDesign* DEFConstructor::getLefPNLDesign(string name) {
         break;
     }
   }
-
-  // if (not masterPNLDesign)
-  //   masterPNLDesign = DEFConstructor::getFramework()->getPNLDesign ( name,
-  //   Catalog::State::Views );
-
   return masterPNLDesign;
 }
 
@@ -267,7 +252,6 @@ PNLTransform DEFConstructor::getPNLTransform(const PNLBox& abox,
 }
 
 PNLDesign* DEFConstructor::createPNLDesign_(const char* name) {
-  // cell_ = DEFConstructor::getFramework()->createPNLDesign ( name, NULL );
   cell_ = PNLDesign::create(getLibrary(true), NLName(name));
   cell_->setClassType(PNLDesign::ClassType::BLOCK);
   addSupplyPNLNets(cell_);
@@ -278,7 +262,7 @@ int DEFConstructor::flushErrors() {
   int code = (hasErrors()) ? 1 : 0;
 
   for (size_t ierror = 0; ierror < errors_.size(); ++ierror) {
-    string message = "DEFConstructor::load(): " + errors_[ierror];
+    string message = "DEFConstructor::construct(): " + errors_[ierror];
     cerr << message.c_str() << " " << cell_->getName().getString().c_str()
          << endl;
   }
@@ -494,11 +478,6 @@ int DEFConstructor::componentCbk_(defrCallbackType_e c,
     parser->mergeToFitOnPNLDesignsDieArea(
         instance->getModel()->getAbutmentBox());
   }
-
-  // cerr << "Create " << componentId << " of " << masterPNLDesign
-  //       << " ab:" << masterPNLDesign->getAbutmentBox() << " @" << placement
-  //       << endl;
-
   return 0;
 }
 
@@ -545,14 +524,6 @@ int DEFConstructor::netCbk_(defrCallbackType_e c,
   if (name.size() < 80)
     name.insert(name.size(), 80 - name.size(), ' ');
 
-  // if (tty::enabled()) {
-  //   cmess2 << "     <net:"
-  //          << tty::bold  << setw(7)  << setfill('0') << ++netCount << "> " <<
-  //          setfill(' ')
-  //          << tty::reset << setw(80) << name << tty::cr;
-  //   cmess2.flush ();
-  // }
-
   int numConnections = net->numConnections();
   for (int icon = 0; icon < numConnections; ++icon) {
     string instanceName = net->instance(icon);
@@ -594,7 +565,6 @@ int DEFConstructor::snetCbk_(defrCallbackType_e c,
   static size_t netCount = 0;
 
   DEFConstructor* parser = (DEFConstructor*)ud;
-  // cerr << "     - Special PNLNet " << net->name() << endl;
 
   string name = net->name();
   parser->toHurricaneName(name);
@@ -623,14 +593,6 @@ int DEFConstructor::snetCbk_(defrCallbackType_e c,
   if (name.size() < 80)
     name.insert(name.size(), 80 - name.size(), ' ');
 
-  // if (tty::enabled()) {
-  //   cmess2 << "     <net:"
-  //          << tty::bold  << setw(7)  << setfill('0') << ++netCount << "> " <<
-  //          setfill(' ')
-  //          << tty::reset << setw(80) << name << tty::cr;
-  //   cmess2.flush ();
-  // }
-
   int numConnections = net->numConnections();
   for (int icon = 0; icon < numConnections; ++icon) {
     string instanceName = net->instance(icon);
@@ -650,16 +612,6 @@ int DEFConstructor::snetCbk_(defrCallbackType_e c,
       parser->pushError(message.str());
       continue;
     }
-
-    /*PNLNet* masterPNLNet = instance->getModel()->getNet( NLName(pinName) );
-    if (not masterPNLNet) {
-      ostringstream message;
-      message << "Unknown PIN <" << pinName << "> in instance <"
-              << instanceName << "> (LEF MACRO) in <%s>.";
-      parser->pushError( message.str() );
-      continue;
-    }*/
-
     instance->getInstTerm(NLName(pinName))->setNet(hnet);
   }
 
@@ -668,7 +620,6 @@ int DEFConstructor::snetCbk_(defrCallbackType_e c,
 
 int DEFConstructor::netEndCbk_(defrCallbackType_e c, void*, lefiUserData ud) {
   DEFConstructor* parser = (DEFConstructor*)ud;
-  // if (tty::enabled()) cmess2 << endl;
   return parser->flushErrors();
 }
 
@@ -684,12 +635,9 @@ PNLDesign* DEFConstructor::parse(string file,
   size_t iext = file.rfind('.');
   if (file.compare(iext, 4, ".def") != 0) {
     assert(false);
-    // throw Error ("DEFConstructor::load(): DEF files must have  \".def\"
+    // throw Error ("DEFConstructor::construct(): DEF files must have  \".def\"
     // extension <%s>.",file.c_str());
   }
-
-  //_framework  = AllianceFramework::get();
-  //_technology = DataBase::getDB()->getTechnology();
 
   size_t istart = 0;
   size_t length = file.size() - 4;
@@ -699,15 +647,13 @@ PNLDesign* DEFConstructor::parse(string file,
     length = file.size() - istart - 4;
   }
   string designName = file.substr(istart, length);
-  // AllianceNLLibrary*      library    = _framework->getAllianceNLLibrary(
-  // (unsigned int)0 );
   unique_ptr<DEFConstructor> parser(
       new DEFConstructor(file, /*library,*/ flags, db));
 
   FILE* defStream = fopen(file.c_str(), "r");
   if (not defStream) {
     assert(false);
-    // throw Error ("DEFConstructor::load(): Cannot open DEF file
+    // throw Error ("DEFConstructor::construct(): Cannot open DEF file
     // <%s>.",file.c_str());
   }
 
@@ -719,17 +665,12 @@ PNLDesign* DEFConstructor::parse(string file,
   return parser->getPNLDesign();
 }
 
-PNLDesign* DEFConstructor::load(string design,
+PNLDesign* DEFConstructor::construct(string design,
                                 unsigned int flags,
                                 naja::NL::NLDB* db) {
-  // UpdateSession::open ();
-
   PNLDesign* cell = NULL;
   if ((design.size() > 4) and (design.substr(design.size() - 4) != ".def"))
     design += ".def";
   cell = DEFConstructor::parse(design, flags, db);
-
-  // UpdateSession::close ();
-
   return cell;
 }

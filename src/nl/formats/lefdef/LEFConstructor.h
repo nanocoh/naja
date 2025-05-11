@@ -58,7 +58,7 @@ class LEFConstructor {
   inline void addPinComponent(string name, PNLTerm*);
   inline void clearPinComponents();
   naja::NL::NLDB* getDB() { return db_; }
-  static naja::NL::NLLibrary* load(std::string fileName);
+  static naja::NL::NLLibrary* construct(std::string fileName);
 
  private:
   static int unitsCbk_(lefrCallbackType_e, lefiUnits*, lefiUserData);

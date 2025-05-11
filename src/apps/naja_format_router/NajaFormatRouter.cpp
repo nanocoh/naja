@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
 
   //naja::NajaPerf::Scope scope("Parsing Lef");
   NLUniverse::create();
-  auto lib = LEFConstructor::load("./file.lef"); 
+  auto lib = LEFConstructor::construct("./file.lef"); 
   printf("Library loaded %s\n", lib->getName().getString().c_str());
   for (auto design : lib->getPNLDesigns()) {
     printf("Design: %s\n", design->getName().getString().c_str());
@@ -140,7 +140,7 @@ int main(int argc, char* argv[]) {
     }
   }
   
-  naja::NL::PNLDesign* design = DEFConstructor::load("./file.def", DEFConstructor::FitAbOnDesigns, lib->getDB());
+  naja::NL::PNLDesign* design = DEFConstructor::construct("./file.def", DEFConstructor::FitAbOnDesigns, lib->getDB());
   for (auto instance : design->getInstances()) {
     printf("instance: %s\n", instance->getName().getString().c_str());
   }

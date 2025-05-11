@@ -32,7 +32,7 @@ class DEFConstructor {
 
  public:
   PNLDesign* createPNLDesign_(const char* name);
-  static naja::NL::PNLDesign* load(std::string design,
+  static naja::NL::PNLDesign* construct(std::string design,
                                    unsigned int flags,
                                    naja::NL::NLDB* db);
 
@@ -99,12 +99,9 @@ class DEFConstructor {
 
  private:
   static double defUnits_;
-  // static AllianceFramework*    _framework;
-  // static Technology*           _technology;
   static NLLibrary* lefRootNLLibrary_;
   uint32_t flags_;
   string file_;
-  // AllianceNLLibrary*      library_;
   string busBits_;
   PNLDesign* cell_;
   size_t pitchs_;

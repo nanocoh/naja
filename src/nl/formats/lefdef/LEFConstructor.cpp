@@ -267,17 +267,11 @@ int LEFConstructor::macroForeignCbk_(lefrCallbackType_e c,
   cell->setTerminalNetlist(true);
   if (created) {
     if (gdsForeignDirectory_.empty()) {
-      // cerr << Warning( "LEFConstructor::macroForeignCbk_(): GDS directory
-      // *not* set, ignoring FOREIGN statement." ) << endl;
       return 0;
     }
 
     string gdsPath = gdsForeignDirectory_ + "/" + foreign->cellName() + ".gds";
     parser->setForeignPath(gdsPath);
-
-    // Gds::setTopPNLDesignName( foreign->cellName() );
-    // Gds::load( parser->getLibrary(), parser->getForeignPath()
-    //          , Gds::NoBlockages|Gds::Layer_0_IsBoundary);
   }
 
   // parser->setForeignPosition( PNLPoint( parser->fromUnitsMicrons(
@@ -557,7 +551,7 @@ int LEFConstructor::flushErrors() {
   int code = (hasErrors()) ? 1 : 0;
 
   for (size_t ierror = 0; ierror < errors_.size(); ++ierror) {
-    // string message = "LefImport::load(): " + errors_[ierror];
+    // string message = "LefImport::construct(): " + errors_[ierror];
     // cerr << Error(message.c_str(),getString(library_->getName()).c_str()) <<
     // endl;
     assert(false);
@@ -570,7 +564,7 @@ int LEFConstructor::flushErrors() {
 NLLibrary* LEFConstructor::parse(string file) {
   size_t iext = file.rfind('.');
   if (file.compare(iext, 4, ".lef") != 0) {
-    // throw Error( "LefImport::load(): DEF files must have  \".lef\" extension
+    // throw Error( "LefImport::construct(): DEF files must have  \".lef\" extension
     // <%s>.", file.c_str() );
     assert(false);
   }
@@ -589,7 +583,7 @@ NLLibrary* LEFConstructor::parse(string file) {
   FILE* lefStream = fopen(file.c_str(), "r");
 
   if (not lefStream) {
-    // throw Error( "LefImport::load(): Cannot open LEF file \"%s\".",
+    // throw Error( "LefImport::construct(): Cannot open LEF file \"%s\".",
     // file.c_str() );
     assert(false);
   }
@@ -599,7 +593,7 @@ NLLibrary* LEFConstructor::parse(string file) {
   return parser->getLibrary();
 }
 
-NLLibrary* LEFConstructor::load(string fileName) {
+NLLibrary* LEFConstructor::construct(string fileName) {
   NLLibrary* library = NULL;
   library = LEFConstructor::parse(fileName);
   return library;

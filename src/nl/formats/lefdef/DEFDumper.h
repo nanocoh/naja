@@ -41,7 +41,6 @@ class DEFDumper {
   inline uint32_t getFlags() const;
   inline int getStatus() const;
   int checkStatus(int status, std::string info);
-  // static int           writeRouting     ( PNLNet*, bool special );
  private:
   static int designCbk_(defwCallbackType_e, defiUserData);
   static int designEndCbk_(defwCallbackType_e, defiUserData);
