@@ -163,7 +163,7 @@ NLLibrary* DEFConstructor::createDEFLibrary() {
   return library_;
 }
 
-PNLDesign* DEFConstructor::getLefPNLDesign(string name) {
+PNLDesign* DEFConstructor::getLEFMacro(string name) {
   // if (not lefRootNLLibrary_) {
   //   NLLibrary*  rootNLLibrary = db_->getRootNLLibrary();
 
@@ -174,15 +174,15 @@ PNLDesign* DEFConstructor::getLefPNLDesign(string name) {
   NLLibrary* rootNLLibrary = db_->getLibrary(NLName("LIB1"));
   lefRootNLLibrary_ = db_->getLibrary(NLName("LEF"));
   assert(lefRootNLLibrary_ != nullptr);
-  PNLDesign* masterPNLDesign = NULL;
+  PNLDesign* macro = NULL;
   if (lefRootNLLibrary_) {
     for (NLLibrary* library : lefRootNLLibrary_->getLibraries()) {
-      masterPNLDesign = library->getPNLDesign(NLName(name));
-      if (masterPNLDesign)
+      macro = library->getPNLDesign(NLName(name));
+      if (macro)
         break;
     }
   }
-  return masterPNLDesign;
+  return macro;
 }
 
 PNLOrientation DEFConstructor::fromDefOrientation(int orient) {
@@ -444,9 +444,9 @@ int DEFConstructor::componentCbk_(defrCallbackType_e c,
 
   string componentName = component->name();
   string componentId = component->id();
-  PNLDesign* masterPNLDesign = parser->getLefPNLDesign(componentName);
+  PNLDesign* macro = parser->getLEFMacro(componentName);
 
-  if (masterPNLDesign == NULL) {
+  if (macro == NULL) {
     ostringstream message;
     message << "Unknown model/PNLDesign (LEF MACRO) " << componentName
             << " in <%s>.";
@@ -461,13 +461,13 @@ int DEFConstructor::componentCbk_(defrCallbackType_e c,
                                     : PNLInstance::PlacementStatus::Fixed;
 
     placement =
-        getPNLTransform(masterPNLDesign->getAbutmentBox(),
+        getPNLTransform(macro->getAbutmentBox(),
                         fromDefUnits(component->placementX()),
                         fromDefUnits(component->placementY()),
                         fromDefOrientation(component->placementOrient()));
   }
   PNLInstance* instance = PNLInstance::create(
-      parser->getPNLDesign(), masterPNLDesign, NLName(componentId));
+      parser->getPNLDesign(), macro, NLName(componentId));
   // , placement
   // , state
   // );

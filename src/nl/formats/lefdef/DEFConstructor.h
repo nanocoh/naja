@@ -37,7 +37,7 @@ class DEFConstructor {
                                    naja::NL::NLDB* db);
 
   // static AllianceFramework* getFramework             ();
-  PNLDesign* getLefPNLDesign(std::string name);
+  PNLDesign* getLEFMacro(std::string name);
   static void setUnits(double);
   static PNLBox::Unit fromDefUnits(int);
   static PNLOrientation fromDefOrientation(int orient);
