@@ -200,7 +200,7 @@ void parseTerms(
   }
   std::vector<SNLBitTerm*> outputs;
   for (auto term: primitive->getBitTerms()) {
-    if (term->getDirection() != SNLTerm::Direction::InOut) {
+    if (term->getDirection() != SNLTerm::Direction::Input) {
       outputs.push_back(term);
     }
   }
