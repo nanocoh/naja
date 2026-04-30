@@ -284,12 +284,10 @@ bool isMemoryClockRelatedInputTerm(
   if (interface.reset != nullptr && term == interface.reset) {
     return true;
   }
-  for (const auto& readPort : interface.readPorts) {
-    if (containsBitTerm(readPort.address, term) ||
-        containsBitTerm(readPort.enables, term)) {
-      return true;
-    }
-  }
+  // Read ports describe the combinational read surface of the memory. They do
+  // not update stored state on the clock edge, so keep them out of the
+  // clock-input relation. Write controls/data and reset are the sequential
+  // next-state dependencies.
   for (const auto& writePort : interface.writePorts) {
     if (containsBitTerm(writePort.address, term) ||
         containsBitTerm(writePort.data, term) ||

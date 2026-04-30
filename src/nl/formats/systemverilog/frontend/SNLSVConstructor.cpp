@@ -22371,7 +22371,8 @@ class SNLSVConstructorImpl {
             return false;
           }
 
-          if (bits.size() < bitTerms.size()) {
+          const bool truncatedOutputConnection = bits.size() < bitTerms.size();
+          if (truncatedOutputConnection) {
             if (targetTerm->getDirection() != SNLTerm::Direction::Output) {
               std::ostringstream reason;
               reason << "term width is " << bitTerms.size()
@@ -22380,7 +22381,18 @@ class SNLSVConstructorImpl {
               setFailureReason(reason.str());
               return false;
             }
-            bitTerms.resize(bits.size());
+            // SystemVerilog permits connecting a narrower lvalue to an output
+            // port; the high-order formal bits are left open. bitTerms is
+            // built from declared LSB toward MSB. That is already the low-order
+            // prefix for descending ranges such as [31:0], but for ascending
+            // packed ranges such as [0:31] the low-order slice is the suffix.
+            if (auto* outputBusTerm = dynamic_cast<SNLBusTerm*>(targetTerm);
+                outputBusTerm && bitTerms.front() && bitTerms.back() &&
+                bitTerms.front()->getBit() > bitTerms.back()->getBit()) {
+              bitTerms.erase(bitTerms.begin(), bitTerms.end() - bits.size());
+            } else {
+              bitTerms.resize(bits.size());
+            }
           }
           auto connectedBits = bits;
           if (targetTerm->getDirection() != SNLTerm::Direction::Input) {
@@ -22395,7 +22407,7 @@ class SNLSVConstructorImpl {
             // LCOV_EXCL_STOP
           }
           if (auto* busTerm = dynamic_cast<SNLBusTerm*>(targetTerm)) {
-            if (connectedBits.size() == bitTerms.size()) {
+            if (!truncatedOutputConnection && connectedBits.size() == bitTerms.size()) {
               PackedNetRef packedRef;
               if (tryGetPackedNetRef(connectedBits, packedRef) && packedRef.net) {
                 try {
