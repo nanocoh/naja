@@ -25,6 +25,7 @@
 #include <sstream>
 #include <string>
 #include <system_error>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
