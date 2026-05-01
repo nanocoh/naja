@@ -14,7 +14,7 @@ target_compile_definitions(snlSVConstructorTests PRIVATE
   SNL_SV_BENCHMARKS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../benchmarks"
   SNL_SV_DUMPER_TEST_PATH="${CMAKE_CURRENT_BINARY_DIR}")
 target_link_libraries(snlSVConstructorTests
-  naja_snl_systemverilog
+  naja_snl_systemverilog_test
   naja_snl_verilog
   naja_dnl
   gmock

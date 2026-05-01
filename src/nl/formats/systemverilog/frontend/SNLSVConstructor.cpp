@@ -15306,13 +15306,33 @@ endmodule
         return lhsExpr; // LCOV_EXCL_LINE
       }
 
+      // Replay environments are keyed by the root storage symbol. Nested
+      // selections such as `array[i].field[k]` therefore have to replay against
+      // the whole `array`, not a selected entry or subfield, otherwise branches
+      // can cache incompatible widths for the same symbol.
+      const auto getRepresentableRootExpr = [&]() -> const Expression* {
+        const auto* rootExpr = getSelectionBaseExpression(*stripped);
+        if (!rootExpr ||
+            (!getRepresentableExpressionBitWidth(*rootExpr) &&
+             !getExpressionBitstreamWidth(*rootExpr))) {
+          return nullptr;
+        }
+        return rootExpr;
+      };
+
       const Expression* baseExpr = nullptr;
       if (stripped->kind == slang::ast::ExpressionKind::ElementSelect) {
         baseExpr = stripConversions(
           stripped->as<slang::ast::ElementSelectExpression>().value());
+        if (const auto* rootExpr = getRepresentableRootExpr()) {
+          return rootExpr;
+        }
       } else if (stripped->kind == slang::ast::ExpressionKind::RangeSelect) {
         baseExpr = stripConversions(
           stripped->as<slang::ast::RangeSelectExpression>().value());
+        if (const auto* rootExpr = getRepresentableRootExpr()) {
+          return rootExpr;
+        }
       } else if (stripped->kind == slang::ast::ExpressionKind::MemberAccess) {
         baseExpr = stripConversions(
           stripped->as<slang::ast::MemberAccessExpression>().value());
@@ -15320,6 +15340,9 @@ endmodule
             (!getRepresentableExpressionBitWidth(*baseExpr) &&
              !getExpressionBitstreamWidth(*baseExpr))) {
           return lhsExpr;
+        }
+        if (const auto* rootExpr = getRepresentableRootExpr()) {
+          return rootExpr;
         }
       } else {
         return lhsExpr; // LCOV_EXCL_LINE
@@ -19284,7 +19307,9 @@ endmodule
         if (falseBits.size() != trueBits.size()) {
           std::ostringstream reason;
           reason << "width mismatch while merging always_comb replay symbol '"
-                 << std::string(symbol->name) << "'";
+                 << std::string(symbol->name) << "'"
+                 << " (false_width=" << falseBits.size()
+                 << ", true_width=" << trueBits.size() << ")";
           failureReason = reason.str();
           return false;
         }
@@ -19826,16 +19851,16 @@ endmodule
             initializer &&
             replaySymbols->contains(&declStmt.symbol)) {
           std::vector<SNLBitNet*> initBits;
-          auto width = getRepresentableExpressionBitWidth(*initializer);
-          // LCOV_EXCL_START
-          // Initializers used for replayed locals normally provide their own
-          // representable width; the declared type fallback is defensive.
-          if (!width) {
-            if (auto range = getRangeFromType(declStmt.symbol.getType())) {
-              width = static_cast<size_t>(range->width());
-            }
+          std::optional<size_t> width;
+          // Replay locals model the value stored in the declared variable, not
+          // the uncast RHS width. For example, `logic [3:0] index = a[11:0]`
+          // must cache four bits so later assignments to `index` merge cleanly.
+          if (auto range = getRangeFromType(declStmt.symbol.getType())) {
+            width = static_cast<size_t>(range->width());
           }
-          // LCOV_EXCL_STOP
+          if (!width) {
+            width = getRepresentableExpressionBitWidth(*initializer);
+          }
           if (!width || !*width ||
               !resolveExpressionBits(design, *initializer, static_cast<size_t>(*width), initBits) ||
               initBits.size() != static_cast<size_t>(*width)) {
