@@ -2946,6 +2946,85 @@ endmodule
   EXPECT_NE(top->getNet(NLName("o")), nullptr);
 }
 
+TEST_F(SNLSVConstructorTestSimple, parseGeneratedGenvarEqualityUsesElaboratedIndex) {
+  SNLSVConstructor constructor(library_);
+  std::filesystem::path outPath(SNL_SV_DUMPER_TEST_PATH);
+  outPath = outPath / "generated_genvar_equality_uses_elaborated_index";
+  if (std::filesystem::exists(outPath)) {
+    std::filesystem::remove_all(outPath);
+  }
+  std::filesystem::create_directory(outPath);
+
+  const auto svPath = outPath / "generated_genvar_equality_uses_elaborated_index.sv";
+  std::ofstream svFile(svPath);
+  ASSERT_TRUE(svFile.good());
+  svFile
+    << R"(module generated_genvar_equality_uses_elaborated_index(
+  input  logic [1:0] addr_i,
+  output logic [1:0] dec_o
+);
+  for (genvar i = 0; i < 2; i = i + 1) begin : g_decode
+    assign dec_o[i] = (addr_i == 2'(i));
+  end
+endmodule
+)";
+  svFile.close();
+
+  constructor.construct(svPath);
+
+  auto top = library_->getSNLDesign(
+    NLName("generated_genvar_equality_uses_elaborated_index"));
+  ASSERT_NE(top, nullptr);
+
+  const auto dumpedVerilog = dumpTopAndGetVerilogPath(
+    top,
+    "generated_genvar_equality_uses_elaborated_index_dump");
+  const auto dumpedText = readTextFile(dumpedVerilog);
+  EXPECT_NE(std::string::npos, dumpedText.find("addr_i[0], 1'b0"));
+  EXPECT_NE(std::string::npos, dumpedText.find("addr_i[0], 1'b1"));
+}
+
+TEST_F(SNLSVConstructorTestSimple, parseAlwaysCombForSizedCastIndexEqualitySupported) {
+  SNLSVConstructor constructor(library_);
+  std::filesystem::path outPath(SNL_SV_DUMPER_TEST_PATH);
+  outPath = outPath / "always_comb_for_sized_cast_index_equality";
+  if (std::filesystem::exists(outPath)) {
+    std::filesystem::remove_all(outPath);
+  }
+  std::filesystem::create_directory(outPath);
+
+  const auto svPath = outPath / "always_comb_for_sized_cast_index_equality.sv";
+  std::ofstream svFile(svPath);
+  ASSERT_TRUE(svFile.good());
+  svFile
+    << R"(module always_comb_for_sized_cast_index_equality(
+  input  logic [1:0] addr_i,
+  input  logic       we_i,
+  output logic [1:0] dec_o
+);
+  always_comb begin
+    for (int unsigned i = 0; i < 2; i++) begin
+      dec_o[i] = (addr_i == 2'(i)) ? we_i : 1'b0;
+    end
+  end
+endmodule
+)";
+  svFile.close();
+
+  constructor.construct(svPath);
+
+  auto top = library_->getSNLDesign(
+    NLName("always_comb_for_sized_cast_index_equality"));
+  ASSERT_NE(top, nullptr);
+
+  const auto dumpedVerilog = dumpTopAndGetVerilogPath(
+    top,
+    "always_comb_for_sized_cast_index_equality_dump");
+  const auto dumpedText = readTextFile(dumpedVerilog);
+  EXPECT_NE(std::string::npos, dumpedText.find("addr_i[0], 1'b0"));
+  EXPECT_NE(std::string::npos, dumpedText.find("addr_i[0], 1'b1"));
+}
+
 TEST_F(
   SNLSVConstructorTestSimple,
   parseContinuousAssignNamedParameterUnknownBitSliceSupported) {
@@ -8600,6 +8679,42 @@ endmodule
 
 TEST_F(
   SNLSVConstructorTestSimple,
+  mergeProceduralReplayEnvsCopiesMissingTrueSymbolsAndExternalOverride) {
+  const auto result = detail::testSVConstructorMergeProceduralReplayEnvs();
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->success);
+  EXPECT_EQ(2u, result->mergedSymbolCount);
+  EXPECT_TRUE(result->missingTrueSymbolCopied);
+  EXPECT_TRUE(result->externalSymbolOverrodeBranches);
+  EXPECT_TRUE(result->failureReason.empty());
+  EXPECT_TRUE(result->widthMismatchRejected);
+  EXPECT_NE(
+    std::string::npos,
+    result->widthMismatchFailureReason.find(
+      "width mismatch while merging always_comb replay symbol"));
+}
+
+TEST_F(
+  SNLSVConstructorTestSimple,
+  activeForLoopConstantHelpersHandleNamesSourcesParametersAndOverflow) {
+  const auto result = detail::testSVConstructorActiveForLoopConstantHelpers();
+  ASSERT_TRUE(result.has_value());
+  EXPECT_TRUE(result->symbolDescriptionHit);
+  EXPECT_TRUE(result->nameDescriptionHit);
+  EXPECT_TRUE(result->crossScopeSymbolNameHit);
+  EXPECT_TRUE(result->emptyIdentifierRejected);
+  EXPECT_TRUE(result->missingSourceRejected);
+  EXPECT_TRUE(result->nameSourceHit);
+  EXPECT_TRUE(result->negativeUnsignedRejected);
+  EXPECT_TRUE(result->parameterUnsignedResolved);
+  EXPECT_TRUE(result->parameterInt64Resolved);
+  EXPECT_TRUE(result->multiplySourceOverflowRejected);
+  EXPECT_TRUE(result->negativeEqualityOperandRejected);
+  EXPECT_TRUE(result->unknownParameterInt64Rejected);
+}
+
+TEST_F(
+  SNLSVConstructorTestSimple,
   applyForLoopStepExpressionHandlesOperandConstantAndBinaryRhsForms) {
   const auto sameValue =
     detail::testSVConstructorApplyForLoopStepExpressionFromForLoop(
@@ -8741,6 +8856,15 @@ TEST_F(
   EXPECT_NE(
     std::string::npos,
     multiply->failureReason.find("unsupported compound for-loop assignment operator: *"));
+
+  const auto divide =
+    detail::testSVConstructorApplyConstantCompoundForLoopOperator("/", 6, 2);
+  ASSERT_TRUE(divide.has_value());
+  EXPECT_FALSE(divide->success);
+  EXPECT_EQ(6, divide->loopValue);
+  EXPECT_NE(
+    std::string::npos,
+    divide->failureReason.find("unsupported compound for-loop assignment operator: /"));
 }
 
 TEST_F(
@@ -13610,6 +13734,45 @@ endmodule
 
 TEST_F(
   SNLSVConstructorTestSimple,
+  parseAlwaysCombForLoopUnaryBodyActionPreservesLoopNameConstants) {
+  SNLSVConstructor constructor(library_);
+  std::filesystem::path outPath(SNL_SV_DUMPER_TEST_PATH);
+  outPath = outPath / "always_comb_for_loop_unary_body_action_preserves_loop_name_constants";
+  if (std::filesystem::exists(outPath)) {
+    std::filesystem::remove_all(outPath);
+  }
+  std::filesystem::create_directory(outPath);
+
+  const auto svPath =
+    outPath / "always_comb_for_loop_unary_body_action_preserves_loop_name_constants.sv";
+  std::ofstream svFile(svPath);
+  ASSERT_TRUE(svFile.good());
+  svFile
+    << R"(module always_comb_for_loop_unary_body_action_preserves_loop_name_constants(
+  output logic [1:0] y
+);
+  always_comb begin
+    y = 2'b00;
+    for (int i = 0; i < 2; i++) begin
+      y++;
+    end
+  end
+endmodule
+)";
+  svFile.close();
+
+  constructor.construct(svPath);
+
+  auto top = library_->getSNLDesign(
+    NLName("always_comb_for_loop_unary_body_action_preserves_loop_name_constants"));
+  ASSERT_NE(top, nullptr);
+  auto yNet = top->getBusNet(NLName("y"));
+  ASSERT_NE(yNet, nullptr);
+  EXPECT_EQ(2, yNet->getWidth());
+}
+
+TEST_F(
+  SNLSVConstructorTestSimple,
   parseAlwaysCombForLoopNamedValueSelectorSupported) {
   SNLSVConstructor constructor(library_);
   std::filesystem::path outPath(SNL_SV_DUMPER_TEST_PATH);
@@ -14096,6 +14259,46 @@ endmodule
   auto yNet = top->getBusNet(NLName("y"));
   ASSERT_NE(yNet, nullptr);
   EXPECT_EQ(3, yNet->getWidth());
+}
+
+TEST_F(
+  SNLSVConstructorTestSimple,
+  parseAlwaysCombForLoopMultiplyNonconstantFactorChecksOverflowGuard) {
+  SNLSVConstructor constructor(library_);
+  std::filesystem::path outPath(SNL_SV_DUMPER_TEST_PATH);
+  outPath = outPath / "always_comb_for_loop_multiply_nonconstant_factor_checks_overflow_guard";
+  if (std::filesystem::exists(outPath)) {
+    std::filesystem::remove_all(outPath);
+  }
+  std::filesystem::create_directory(outPath);
+
+  const auto svPath =
+    outPath / "always_comb_for_loop_multiply_nonconstant_factor_checks_overflow_guard.sv";
+  std::ofstream svFile(svPath);
+  ASSERT_TRUE(svFile.good());
+  svFile
+    << R"(module always_comb_for_loop_multiply_nonconstant_factor_checks_overflow_guard(
+  input  logic [1:0] in,
+  output logic [1:0] y
+);
+  always_comb begin
+    y = '0;
+    for (int i = 0; i < 1; i++) begin
+      y = i * in;
+    end
+  end
+endmodule
+)";
+  svFile.close();
+
+  constructor.construct(svPath);
+
+  auto top = library_->getSNLDesign(
+    NLName("always_comb_for_loop_multiply_nonconstant_factor_checks_overflow_guard"));
+  ASSERT_NE(top, nullptr);
+  auto yNet = top->getBusNet(NLName("y"));
+  ASSERT_NE(yNet, nullptr);
+  EXPECT_EQ(2, yNet->getWidth());
 }
 
 TEST_F(
@@ -16528,6 +16731,90 @@ endmodule
 
   auto top = library_->getSNLDesign(NLName("always_comb_enum_case_literal_item_warns"));
   ASSERT_NE(top, nullptr);
+}
+
+TEST_F(SNLSVConstructorTestSimple, parseAlwaysCombEnumOpcodeCaseWithFinalIllegalGuardSupported) {
+  SNLSVConstructor constructor(library_);
+  std::filesystem::path outPath(SNL_SV_DUMPER_TEST_PATH);
+  outPath = outPath / "always_comb_enum_opcode_case_final_illegal_guard";
+  if (std::filesystem::exists(outPath)) {
+    std::filesystem::remove_all(outPath);
+  }
+  std::filesystem::create_directory(outPath);
+
+  const auto svPath = outPath / "always_comb_enum_opcode_case_final_illegal_guard.sv";
+  std::ofstream svFile(svPath);
+  ASSERT_TRUE(svFile.good());
+  svFile
+    << R"(module always_comb_enum_opcode_case_final_illegal_guard(
+  input  logic [6:0] instr_i,
+  input  logic       first_cycle_i,
+  input  logic       illegal_c_i,
+  output logic       jump_in_dec_o,
+  output logic       jump_set_o,
+  output logic       branch_in_dec_o,
+  output logic       illegal_o
+);
+  typedef enum logic [6:0] {
+    OPCODE_BRANCH = 7'h63,
+    OPCODE_JAL    = 7'h6f,
+    OPCODE_JALR   = 7'h67
+  } opcode_e;
+
+  opcode_e opcode;
+  logic illegal;
+
+  always_comb begin
+    jump_in_dec_o  = 1'b0;
+    jump_set_o     = 1'b0;
+    branch_in_dec_o = 1'b0;
+    illegal        = 1'b0;
+    opcode         = opcode_e'(instr_i[6:0]);
+
+    unique case (opcode)
+      OPCODE_JAL: begin
+        jump_in_dec_o = 1'b1;
+        if (first_cycle_i) begin
+          jump_set_o = 1'b1;
+        end
+      end
+      OPCODE_BRANCH: begin
+        branch_in_dec_o = 1'b1;
+      end
+      default: begin
+        illegal = 1'b1;
+      end
+    endcase
+
+    if (illegal_c_i) begin
+      illegal = 1'b1;
+    end
+
+    if (illegal) begin
+      jump_in_dec_o   = 1'b0;
+      jump_set_o      = 1'b0;
+      branch_in_dec_o = 1'b0;
+    end
+  end
+
+  assign illegal_o = illegal;
+endmodule
+)";
+  svFile.close();
+
+  constructor.construct(svPath);
+
+  auto top = library_->getSNLDesign(
+    NLName("always_comb_enum_opcode_case_final_illegal_guard"));
+  ASSERT_NE(top, nullptr);
+  EXPECT_GE(countMux2Instances(top), 3u);
+
+  const auto dumpedVerilog =
+    dumpTopAndGetVerilogPath(top, "always_comb_enum_opcode_case_final_illegal_guard_dump");
+  const auto dumpedText = readTextFile(dumpedVerilog);
+  EXPECT_EQ(std::string::npos, dumpedText.find("assign jump_in_dec_o = 1'b0;"));
+  EXPECT_EQ(std::string::npos, dumpedText.find("assign jump_set_o = 1'b0;"));
+  EXPECT_EQ(std::string::npos, dumpedText.find("assign branch_in_dec_o = 1'b0;"));
 }
 
 TEST_F(SNLSVConstructorTestSimple, parseAlwaysCombConditionSubtractSupported) {
