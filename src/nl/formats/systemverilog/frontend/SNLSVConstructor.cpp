@@ -15534,6 +15534,58 @@ endmodule
              canEvalSelection(); // LCOV_EXCL_LINE
     }
 
+    bool isStaticFixedPackedRangeSelection(const Expression& expr) const {
+      const auto* stripped = stripConversions(expr);
+      if (!stripped ||
+          stripped->kind != slang::ast::ExpressionKind::RangeSelect) {
+        return false;
+      }
+
+      const auto& rangeExpr = stripped->as<slang::ast::RangeSelectExpression>();
+      const auto* valueExpr = stripConversions(rangeExpr.value());
+      if (!valueExpr) {
+        return false; // LCOV_EXCL_LINE
+      }
+
+      const auto& valueType = valueExpr->type->getCanonicalType();
+      if (valueType.isUnpackedArray() || !valueType.hasFixedRange()) {
+        return false;
+      }
+      const bool isNestedSelection =
+        valueExpr->kind == slang::ast::ExpressionKind::ElementSelect ||
+        valueExpr->kind == slang::ast::ExpressionKind::RangeSelect ||
+        valueExpr->kind == slang::ast::ExpressionKind::MemberAccess;
+      if (!isNestedSelection) {
+        return false;
+      }
+      if (!getRepresentableExpressionBitWidth(*stripped)) {
+        return false; // LCOV_EXCL_LINE
+      }
+
+      // Keep concrete packed slices under another selection as their own LHS.
+      // This lets the sequential fallback recognize `q[0][31:0]` as a
+      // sub-write of a reset target like `q[0]`. Top-level vector slices such
+      // as `y[3:1]` still collapse to `y`, preserving existing last-write-wins
+      // handling for overlapping ranges.
+      int32_t left = 0;
+      int32_t right = 0;
+      switch (rangeExpr.getSelectionKind()) {
+        case slang::ast::RangeSelectionKind::Simple:
+          return !isActiveForLoopVariableExpr(rangeExpr.left()) &&
+                 !isActiveForLoopVariableExpr(rangeExpr.right()) &&
+                 getConstantInt32(rangeExpr.left(), left) &&
+                 getConstantInt32(rangeExpr.right(), right);
+        case slang::ast::RangeSelectionKind::IndexedUp:
+        case slang::ast::RangeSelectionKind::IndexedDown:
+          return !isActiveForLoopVariableExpr(rangeExpr.left()) &&
+                 !isActiveForLoopVariableExpr(rangeExpr.right()) &&
+                 getConstantInt32(rangeExpr.left(), left) &&
+                 getConstantInt32(rangeExpr.right(), right) &&
+                 right > 0;
+      }
+      return false; // LCOV_EXCL_LINE
+    }
+
     const Expression* getTrackedSequentialFallbackLHS(const Expression* lhsExpr) const {
       if (!lhsExpr) {
         return nullptr; // LCOV_EXCL_LINE
@@ -15547,6 +15599,9 @@ endmodule
         return lhsExpr;
       }
       if (isStaticFixedPackedArraySelection(*stripped)) {
+        return lhsExpr;
+      }
+      if (isStaticFixedPackedRangeSelection(*stripped)) {
         return lhsExpr;
       }
 
@@ -20474,6 +20529,18 @@ endmodule
                 aliasesResetBase = true;
               }
               // LCOV_EXCL_STOP
+            }
+            if (!aliasesResetBase &&
+                isTrackedSelectionSubLhsOf(lhsExpr, resetLhsExpr)) {
+              // A reset of an unpacked element followed by packed sub-writes
+              // is a common counter/register pattern:
+              //   if (!rst) q[i] <= '0;
+              //   else      q[i][31:0] <= data;
+              // Treat those sub-writes as updates to the reset target so the
+              // normal single-LHS replay below can merge them into one next
+              // state function.
+              supportedElseLhs = true;
+              aliasesResetBase = true;
             }
             if (!supportedElseLhs) {
               allOtherElseLhsSupported = false;

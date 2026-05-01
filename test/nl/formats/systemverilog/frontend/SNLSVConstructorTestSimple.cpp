@@ -22031,6 +22031,71 @@ endmodule
     {"fallback currently supports only multi-LHS reset branches"});
 }
 
+TEST_F(
+  SNLSVConstructorTestSimple,
+  parseSequentialSingleResetArrayElementPartialElseSupported) {
+  SNLSVConstructor constructor(library_);
+  std::filesystem::path outPath(SNL_SV_DUMPER_TEST_PATH);
+  outPath = outPath / "seq_single_reset_array_element_partial_else_supported";
+  if (std::filesystem::exists(outPath)) {
+    std::filesystem::remove_all(outPath);
+  }
+  std::filesystem::create_directory(outPath);
+
+  const auto svPath =
+    outPath / "seq_single_reset_array_element_partial_else_supported.sv";
+  std::ofstream svFile(svPath);
+  ASSERT_TRUE(svFile.good());
+  svFile
+    << R"(module seq_single_reset_array_element_partial_else_supported(
+  input  logic        clk_i,
+  input  logic        rst_ni,
+  input  logic        write_lower_i,
+  input  logic        write_upper_i,
+  input  logic        increment_i,
+  input  logic [31:0] wdata_i,
+  input  logic [63:0] increment_data_i,
+  output logic [63:0] q_o
+);
+  logic [1:0][63:0] q;
+
+  always_ff @(posedge clk_i or negedge rst_ni) begin
+    if (!rst_ni) begin
+      q[0] <= '0;
+    end else begin
+      if (write_lower_i) begin
+        q[0][31:0] <= wdata_i;
+      end else if (write_upper_i) begin
+        q[0][63:32] <= wdata_i;
+      end else if (increment_i) begin
+        q[0] <= increment_data_i;
+      end
+    end
+  end
+
+  assign q_o = q[0];
+endmodule
+)";
+  svFile.close();
+
+  constructor.construct(svPath);
+
+  auto top = library_->getSNLDesign(
+    NLName("seq_single_reset_array_element_partial_else_supported"));
+  ASSERT_NE(top, nullptr);
+  EXPECT_NE(top->getNet(NLName("q_o")), nullptr);
+
+  auto dffrnModel = NLDB0::getDFFRN();
+  ASSERT_NE(dffrnModel, nullptr);
+  size_t dffrnCount = 0;
+  for (auto inst : top->getInstances()) {
+    if (inst->getModel() == dffrnModel) {
+      ++dffrnCount;
+    }
+  }
+  EXPECT_EQ(64u, dffrnCount);
+}
+
 TEST_F(SNLSVConstructorTestSimple, parseAlwaysCombSignedLocalparamConstantSupported) {
   SNLSVConstructor constructor(library_);
   std::filesystem::path outPath(SNL_SV_DUMPER_TEST_PATH);
