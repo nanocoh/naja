@@ -44,7 +44,7 @@ cases:
           - --generated
           - "{artifacts}/borg_naja.v"
           - --primitives
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
       pass_regex: BORG_COCOTB_SIM_PASS
 
   - name: black_parrot
@@ -81,20 +81,21 @@ cases:
       rtl_infos_as_attributes: true
     # Structural integration signatures are intentionally tied to the pinned
     # CVA6 commit above. Update these counts only after reviewing the cone diff.
-    # Shared index decoding removes 42 XNOR and 20 AND gates (82 edges);
-    # cone boundary counts and the individual-bit probes remain unchanged.
+    # Shared index decoding removes 42 XNOR and 20 AND gates (82 edges).
+    # Cached inverter reuse retains one explicit named-net assignment (+1 node
+    # and edge); cone boundary counts and individual-bit probes are unchanged.
     logic_cones:
       - term: noc_req_o
         direction: fanin
         expected:
-          nodes: 1633
-          edges: 2316
+          nodes: 1634
+          edges: 2317
           leaves: 19
           roots: 471
           registers: 16
           ports: 3
           blackboxes: 0
-          internal: 1143
+          internal: 1144
       - term: noc_req_o
         bit: 468
         direction: fanin
@@ -188,7 +189,7 @@ cases:
           - "--generated"
           - "{artifacts}/cva6_testharness_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
       pass_regex: "CVA6_HELLOWORLD_SIM_PASS"
     cva6_extended_sim:
       timeout_seconds: 21600
@@ -215,7 +216,7 @@ cases:
           - "--generated"
           - "{artifacts}/cva6_testharness_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
           - "--program"
           - "hello_world"
           - "--program"
@@ -248,7 +249,7 @@ cases:
           - "--generated"
           - "{artifacts}/cva6_testharness_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
           - "--program"
           - "corev_return0"
           - "--program"
@@ -295,7 +296,7 @@ cases:
           - "--generated"
           - "{artifacts}/cva6_testharness_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
           - "--program"
           - "hello_world"
           - "--program"
@@ -438,7 +439,7 @@ cases:
           - "--generated"
           - "{artifacts}/ibex_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
       pass_regex: "IBEX_HELLOWORLD_SIM_PASS"
     ibex_dit_sim:
       timeout_seconds: 7200
@@ -472,7 +473,7 @@ cases:
           - "--generated"
           - "{artifacts}/ibex_secure_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
           - "--program"
           - "dit_test"
           - "--secure-ibex"
@@ -511,7 +512,7 @@ cases:
           - "--generated"
           - "{artifacts}/ibex_secure_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
           - "--program"
           - "dummy_instr_test"
           - "--secure-ibex"
@@ -552,7 +553,7 @@ cases:
           - "--generated"
           - "{artifacts}/ibex_pmp_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
           - "--program"
           - "pmp_smoke_test"
           - "--max-cycles"
@@ -590,7 +591,7 @@ cases:
           - "--generated"
           - "{artifacts}/ibex_secure_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
           - "--program"
           - "dit_test"
           - "--secure-ibex"
@@ -629,7 +630,7 @@ cases:
           - "--generated"
           - "{artifacts}/ibex_secure_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
           - "--program"
           - "dummy_instr_test"
           - "--secure-ibex"
@@ -713,7 +714,7 @@ cases:
           - "--generated"
           - "{artifacts}/cv32e40p_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
       pass_regex: "CV32E40P_HELLOWORLD_SIM_PASS"
     interrupt_sim:
       timeout_seconds: 7200
@@ -736,7 +737,7 @@ cases:
           - "--generated"
           - "{artifacts}/cv32e40p_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
           - "--program"
           - "interrupt"
           - "--max-cycles"
@@ -774,7 +775,7 @@ cases:
           - "--generated"
           - "{artifacts}/cv32e40p_pulp_naja.v"
           - "--primitives"
-          - "{naja}/test/nl/formats/systemverilog/benchmarks/najaeda_primitives.v"
+          - "{artifacts}/naja_primitives.v"
           - "--program"
           - "hwlp"
           - "--max-cycles"
